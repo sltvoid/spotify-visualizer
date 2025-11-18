@@ -33,7 +33,10 @@ export const getAuthUrl = (): string => {
     scope: SCOPES,
   });
 
-  return `https://accounts.spotify.com/authorize?${params.toString()}`;
+  const authUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
+  console.log('🚀 Redirecting to:', authUrl);
+
+  return authUrl;
 };
 
 export const handleCallback = (): string | null => {
