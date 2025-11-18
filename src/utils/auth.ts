@@ -8,6 +8,8 @@ const SCOPES = [
   'user-read-recently-played',
   'user-library-read',
   'playlist-read-private',
+  'playlist-read-collaborative',
+  'user-follow-read',
 ].join(' ');
 
 // Generate code verifier for PKCE

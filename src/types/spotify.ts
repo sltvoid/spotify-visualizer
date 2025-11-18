@@ -20,6 +20,9 @@ export interface SpotifyAlbum {
   name: string;
   images: SpotifyImage[];
   release_date: string;
+  total_tracks?: number;
+  album_type?: string;
+  artists?: SpotifyArtist[];
   external_urls: {
     spotify: string;
   };
@@ -85,4 +88,56 @@ export interface TopItemsResponse<T> {
 
 export interface RecentlyPlayedResponse {
   items: RecentlyPlayedTrack[];
+}
+
+export interface SavedTrack {
+  added_at: string;
+  track: SpotifyTrack;
+}
+
+export interface SavedAlbum {
+  added_at: string;
+  album: SpotifyAlbum;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description: string | null;
+  images: SpotifyImage[];
+  tracks: {
+    total: number;
+    href: string;
+  };
+  owner: {
+    id: string;
+    display_name: string;
+  };
+  public: boolean;
+  collaborative: boolean;
+  external_urls: {
+    spotify: string;
+  };
+}
+
+export interface PlaylistTrack {
+  added_at: string;
+  track: SpotifyTrack;
+}
+
+export interface Recommendations {
+  tracks: SpotifyTrack[];
+  seeds: {
+    id: string;
+    type: string;
+  }[];
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  next: string | null;
+  previous: string | null;
 }

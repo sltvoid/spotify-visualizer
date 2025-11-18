@@ -8,21 +8,32 @@ import TopTracks from '../components/TopTracks';
 import RecentlyPlayed from '../components/RecentlyPlayed';
 import AudioFeatures from '../components/AudioFeatures';
 import GenreDistribution from '../components/GenreDistribution';
+import SavedLibrary from '../components/SavedLibrary';
+import TopAlbums from '../components/TopAlbums';
+import AdvancedAudioAnalysis from '../components/AdvancedAudioAnalysis';
+import Playlists from '../components/Playlists';
+
+type TabId = 'overview' | 'artists' | 'tracks' | 'albums' | 'recent' | 'library' | 'playlists' | 'features' | 'genres' | 'advanced';
 
 export default function Dashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('medium_term');
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'artists' | 'tracks' | 'recent' | 'features' | 'genres'
-  >('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
 
-  const tabs = [
-    { id: 'overview' as const, label: 'Overview' },
-    { id: 'artists' as const, label: 'Top Artists' },
-    { id: 'tracks' as const, label: 'Top Tracks' },
-    { id: 'recent' as const, label: 'Recently Played' },
-    { id: 'features' as const, label: 'Audio Features' },
-    { id: 'genres' as const, label: 'Genres' },
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'artists', label: 'Top Artists' },
+    { id: 'tracks', label: 'Top Tracks' },
+    { id: 'albums', label: 'Top Albums' },
+    { id: 'library', label: 'Library' },
+    { id: 'playlists', label: 'Playlists' },
+    { id: 'recent', label: 'Recently Played' },
+    { id: 'features', label: 'Audio Features' },
+    { id: 'advanced', label: 'Advanced Audio' },
+    { id: 'genres', label: 'Genres' },
   ];
+
+  // Tabs that don't use time range
+  const noTimeRangeTabs: TabId[] = ['recent', 'library', 'playlists'];
 
   return (
     <div className="min-h-screen p-4 md:p-8">
@@ -38,8 +49,8 @@ export default function Dashboard() {
         {/* User Profile */}
         <UserProfile />
 
-        {/* Time Range Selector (not shown for Recently Played) */}
-        {activeTab !== 'recent' && (
+        {/* Time Range Selector (not shown for certain tabs) */}
+        {!noTimeRangeTabs.includes(activeTab) && (
           <div className="card">
             <h3 className="text-lg font-semibold mb-3">Time Period</h3>
             <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
@@ -47,8 +58,8 @@ export default function Dashboard() {
         )}
 
         {/* Tabs */}
-        <div className="card">
-          <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="card overflow-x-auto">
+          <div className="flex gap-2 pb-2 min-w-max">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -87,9 +98,17 @@ export default function Dashboard() {
 
           {activeTab === 'tracks' && <TopTracks timeRange={timeRange} />}
 
+          {activeTab === 'albums' && <TopAlbums timeRange={timeRange} />}
+
+          {activeTab === 'library' && <SavedLibrary />}
+
+          {activeTab === 'playlists' && <Playlists />}
+
           {activeTab === 'recent' && <RecentlyPlayed />}
 
           {activeTab === 'features' && <AudioFeatures timeRange={timeRange} />}
+
+          {activeTab === 'advanced' && <AdvancedAudioAnalysis timeRange={timeRange} />}
 
           {activeTab === 'genres' && <GenreDistribution timeRange={timeRange} />}
         </div>
