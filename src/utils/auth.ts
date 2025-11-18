@@ -11,6 +11,17 @@ const SCOPES = [
 ].join(' ');
 
 export const getAuthUrl = (): string => {
+  // Debug logging
+  console.log('🔍 Debug Info:');
+  console.log('CLIENT_ID:', CLIENT_ID);
+  console.log('REDIRECT_URI:', REDIRECT_URI);
+  console.log('All env vars:', import.meta.env);
+
+  if (!CLIENT_ID) {
+    alert('❌ Error: Spotify Client ID is not configured!\n\nPlease add VITE_SPOTIFY_CLIENT_ID to your Vercel environment variables and redeploy.');
+    throw new Error('VITE_SPOTIFY_CLIENT_ID is not defined. Check your environment variables.');
+  }
+
   const state = generateRandomString(16);
   localStorage.setItem('spotify_auth_state', state);
 
