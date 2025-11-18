@@ -40,6 +40,10 @@ export const getAuthUrl = (): string => {
 };
 
 export const handleCallback = (): string | null => {
+  console.log('🔍 Callback Debug:');
+  console.log('Full URL:', window.location.href);
+  console.log('Hash:', window.location.hash);
+
   const hash = window.location.hash.substring(1);
   const params = new URLSearchParams(hash);
 
@@ -47,17 +51,24 @@ export const handleCallback = (): string | null => {
   const state = params.get('state');
   const storedState = localStorage.getItem('spotify_auth_state');
 
+  console.log('Access Token:', accessToken ? 'Found ✅' : 'Not found ❌');
+  console.log('State from URL:', state);
+  console.log('Stored State:', storedState);
+  console.log('State match:', state === storedState);
+
   if (state !== storedState) {
-    console.error('State mismatch');
+    console.error('❌ State mismatch - possible CSRF attack or state was cleared');
     return null;
   }
 
   if (accessToken) {
+    console.log('✅ Token found! Saving to localStorage...');
     localStorage.setItem('spotify_access_token', accessToken);
     localStorage.removeItem('spotify_auth_state');
     return accessToken;
   }
 
+  console.error('❌ No access token in URL');
   return null;
 };
 
