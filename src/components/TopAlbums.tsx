@@ -93,7 +93,7 @@ export default function TopAlbums({ timeRange }: TopAlbumsProps) {
         {albums.map((album, index) => (
           <div key={album.id} className="card hover:bg-gray-700/50 transition-all">
             <div className="relative mb-4">
-              <span className="absolute -top-2 -left-2 bg-spotify-green text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10">
+              <span className="absolute -top-2 -left-2 bg-spotify-green text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center z-10 shadow-lg ring-2 ring-gray-900">
                 {index + 1}
               </span>
               {album.images[0] ? (

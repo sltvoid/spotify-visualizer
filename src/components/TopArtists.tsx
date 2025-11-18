@@ -69,7 +69,7 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
           <div key={artist.id} className="card hover:bg-gray-700/50 transition-all duration-200">
             <div className="flex items-start gap-4">
               <div className="relative">
-                <span className="absolute -top-2 -left-2 bg-spotify-green text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                <span className="absolute -top-2 -left-2 bg-spotify-green text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center z-10 shadow-lg ring-2 ring-gray-900">
                   {index + 1}
                 </span>
                 {artist.images && artist.images[0] ? (
