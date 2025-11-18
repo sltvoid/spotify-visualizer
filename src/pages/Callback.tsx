@@ -7,12 +7,16 @@ export default function Callback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = handleCallback();
-    if (token) {
-      navigate('/dashboard');
-    } else {
-      navigate('/');
-    }
+    const processCallback = async () => {
+      const token = await handleCallback();
+      if (token) {
+        navigate('/dashboard');
+      } else {
+        navigate('/');
+      }
+    };
+
+    processCallback();
   }, [navigate]);
 
   return (

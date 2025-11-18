@@ -2,8 +2,9 @@ import { Music } from 'lucide-react';
 import { getAuthUrl } from '../utils/auth';
 
 export default function Login() {
-  const handleLogin = () => {
-    window.location.href = getAuthUrl();
+  const handleLogin = async () => {
+    const authUrl = await getAuthUrl();
+    window.location.href = authUrl;
   };
 
   return (
