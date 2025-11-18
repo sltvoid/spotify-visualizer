@@ -12,6 +12,7 @@ import SavedLibrary from '../components/SavedLibrary';
 import TopAlbums from '../components/TopAlbums';
 import AdvancedAudioAnalysis from '../components/AdvancedAudioAnalysis';
 import Playlists from '../components/Playlists';
+import SpotifyLogo from '../components/SpotifyLogo';
 
 type TabId = 'overview' | 'artists' | 'tracks' | 'albums' | 'recent' | 'library' | 'playlists' | 'features' | 'genres' | 'advanced';
 
@@ -40,6 +41,9 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <SpotifyLogo size={64} className="text-spotify-green" />
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
             Your Spotify Stats
           </h1>
