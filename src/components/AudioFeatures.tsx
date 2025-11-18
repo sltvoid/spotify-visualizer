@@ -30,8 +30,12 @@ export default function AudioFeatures({ timeRange }: AudioFeaturesProps) {
         const trackIds = tracks.map((t) => t.id);
         const audioFeatures = await spotifyService.getAudioFeatures(trackIds);
         setFeatures(audioFeatures);
-      } catch (err) {
-        setError('Failed to load audio features');
+      } catch (err: any) {
+        if (err?.response?.status === 403) {
+          setError('Audio features unavailable. This may be due to Spotify Development Mode restrictions. Try with fewer tracks or contact Spotify to enable Extended Quota Mode.');
+        } else {
+          setError('Failed to load audio features');
+        }
         console.error(err);
       } finally {
         setLoading(false);

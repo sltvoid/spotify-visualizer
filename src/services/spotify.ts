@@ -79,14 +79,39 @@ class SpotifyService {
   }
 
   async getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/audio-features`,
-      {
-        ...this.getAuthHeader(),
-        params: { ids: trackIds.join(',') },
-      }
-    );
-    return response.data.audio_features.filter((f: AudioFeatures | null) => f !== null);
+    // Spotify's audio-features endpoint can be restricted in Development Mode
+    // Batch requests into smaller chunks of 20 IDs to avoid 403 errors
+    const BATCH_SIZE = 20;
+    const batches: string[][] = [];
+
+    for (let i = 0; i < trackIds.length; i += BATCH_SIZE) {
+      batches.push(trackIds.slice(i, i + BATCH_SIZE));
+    }
+
+    try {
+      // Make parallel requests for all batches
+      const batchPromises = batches.map(async (batch) => {
+        try {
+          const response = await axios.get(
+            `${SPOTIFY_API_BASE}/audio-features`,
+            {
+              ...this.getAuthHeader(),
+              params: { ids: batch.join(',') },
+            }
+          );
+          return response.data.audio_features.filter((f: AudioFeatures | null) => f !== null);
+        } catch (error) {
+          console.warn(`Failed to fetch audio features for batch:`, error);
+          return []; // Return empty array for failed batches
+        }
+      });
+
+      const results = await Promise.all(batchPromises);
+      return results.flat();
+    } catch (error) {
+      console.error('Error fetching audio features:', error);
+      throw error;
+    }
   }
 
   async getArtist(artistId: string): Promise<SpotifyArtist> {
