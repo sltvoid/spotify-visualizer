@@ -13,8 +13,9 @@ import TopAlbums from '../components/TopAlbums';
 import AdvancedAudioAnalysis from '../components/AdvancedAudioAnalysis';
 import Playlists from '../components/Playlists';
 import SpotifyLogo from '../components/SpotifyLogo';
+import ListeningInsights from '../components/ListeningInsights';
 
-type TabId = 'overview' | 'artists' | 'tracks' | 'albums' | 'recent' | 'library' | 'playlists' | 'features' | 'genres' | 'advanced';
+type TabId = 'overview' | 'insights' | 'artists' | 'tracks' | 'albums' | 'recent' | 'library' | 'playlists' | 'features' | 'genres' | 'advanced';
 
 export default function Dashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('medium_term');
@@ -22,6 +23,7 @@ export default function Dashboard() {
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: 'Overview' },
+    { id: 'insights', label: 'Insights' },
     { id: 'artists', label: 'Top Artists' },
     { id: 'tracks', label: 'Top Tracks' },
     { id: 'albums', label: 'Top Albums' },
@@ -97,6 +99,8 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {activeTab === 'insights' && <ListeningInsights timeRange={timeRange} />}
 
           {activeTab === 'artists' && <TopArtists timeRange={timeRange} />}
 
