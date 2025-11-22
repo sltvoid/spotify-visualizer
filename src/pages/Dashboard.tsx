@@ -41,10 +41,10 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-2">
+          <div className="flex justify-center mb-1">
             <SpotifyLogo size={64} className="text-spotify-green" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl font-bold mb-1 bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
             Your Spotify Stats
           </h1>
           <p className="text-gray-400">Discover your music insights and listening habits</p>
