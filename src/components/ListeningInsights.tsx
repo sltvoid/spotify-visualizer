@@ -54,7 +54,7 @@ export default function ListeningInsights({ timeRange }: ListeningInsightsProps)
 
   // Calculate Obscurity Score (0-100, lower = more mainstream)
   const obscurityScore = artists.length > 0
-    ? Math.round(100 - artists.reduce((sum, a) => sum + a.popularity, 0) / artists.length)
+    ? Math.round(100 - artists.reduce((sum, a) => sum + (a.popularity ?? 0), 0) / artists.length)
     : 0;
 
   // Calculate Genre Diversity Index
@@ -91,7 +91,6 @@ export default function ListeningInsights({ timeRange }: ListeningInsightsProps)
   let energyScore = 0;
 
   if (audioFeatures.length > 0) {
-    const avgValence = audioFeatures.reduce((sum, f) => sum + f.valence, 0) / audioFeatures.length;
     const avgEnergy = audioFeatures.reduce((sum, f) => sum + f.energy, 0) / audioFeatures.length;
     energyScore = Math.round(avgEnergy * 100);
 
