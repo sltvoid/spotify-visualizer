@@ -55,14 +55,6 @@ export default function Dashboard() {
         {/* User Profile */}
         <UserProfile />
 
-        {/* Time Range Selector (not shown for certain tabs) */}
-        {!noTimeRangeTabs.includes(activeTab) && (
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-3">Time Period</h3>
-            <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="card overflow-x-auto">
           <div className="flex gap-2 pb-2 min-w-max">
@@ -80,6 +72,14 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
+
+          {/* Time Range Selector (shown inline for relevant tabs) */}
+          {!noTimeRangeTabs.includes(activeTab) && (
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <h3 className="text-sm font-semibold mb-3 text-gray-300">Time Period</h3>
+              <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+            </div>
+          )}
         </div>
 
         {/* Content */}
