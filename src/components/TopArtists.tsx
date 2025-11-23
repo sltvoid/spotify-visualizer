@@ -66,20 +66,20 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
       {/* Artist Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {artists.map((artist, index) => (
-          <div key={artist.id} className="card hover:bg-gray-700/50 transition-all duration-200">
+          <div key={artist.id} className="card transition-all duration-300">
             <div className="flex items-start gap-4">
               <div className="relative">
-                <span className="absolute -top-2 -left-2 bg-spotify-green text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center z-10 shadow-lg ring-2 ring-gray-900">
+                <span className="absolute -top-2 -left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-white/20">
                   {index + 1}
                 </span>
                 {artist.images && artist.images[0] ? (
                   <img
                     src={artist.images[0].url}
                     alt={artist.name}
-                    className="w-16 h-16 rounded-full object-cover"
+                    className="w-16 h-16 rounded-full object-cover ring-2 ring-white/10 shadow-md"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
                     <span className="text-2xl">🎵</span>
                   </div>
                 )}
@@ -92,13 +92,13 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
                   </p>
                 )}
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="flex-1 bg-gray-700 rounded-full h-2">
+                  <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden backdrop-blur-sm">
                     <div
-                      className="bg-spotify-green h-2 rounded-full"
+                      className="bg-gradient-to-r from-spotify-green to-spotify-green-light h-2 rounded-full shadow-glow-green transition-all duration-500"
                       style={{ width: `${artist.popularity}%` }}
                     />
                   </div>
-                  <span className="text-xs text-gray-400">{artist.popularity}</span>
+                  <span className="text-xs text-gray-300 font-medium">{artist.popularity}</span>
                 </div>
               </div>
               <a

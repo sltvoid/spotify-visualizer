@@ -52,10 +52,10 @@ export default function UserProfile() {
             <img
               src={profile.images[0].url}
               alt={profile.display_name}
-              className="w-16 h-16 rounded-full object-cover"
+              className="w-16 h-16 rounded-full object-cover ring-2 ring-white/20 shadow-lg"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/20">
               <User size={32} className="text-gray-400" />
             </div>
           )}

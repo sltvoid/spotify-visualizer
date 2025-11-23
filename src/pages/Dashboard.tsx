@@ -39,17 +39,17 @@ export default function Dashboard() {
   const noTimeRangeTabs: TabId[] = ['recent', 'library', 'playlists'];
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8 relative z-10">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-1">
-            <SpotifyLogo size={64} className="text-spotify-green" />
+          <div className="flex justify-center mb-1 animate-float">
+            <SpotifyLogo size={64} className="text-spotify-green drop-shadow-[0_0_15px_rgba(29,185,84,0.5)]" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-1 bg-gradient-to-r from-spotify-green to-green-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-5xl font-bold mb-1 bg-gradient-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-transparent drop-shadow-lg">
             Your Spotify Stats
           </h1>
-          <p className="text-gray-400">Discover your music insights and listening habits</p>
+          <p className="text-gray-300">Discover your music insights and listening habits</p>
         </div>
 
         {/* User Profile */}
@@ -70,10 +70,10 @@ export default function Dashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all duration-200 ${
+                className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-300 ${
                   activeTab === tab.id
-                    ? 'bg-spotify-green text-white shadow-lg'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-gradient-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong border border-white/20'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20'
                 }`}
               >
                 {tab.label}

@@ -18,10 +18,10 @@ export default function TimeRangeSelector({ selected, onChange }: TimeRangeSelec
         <button
           key={value}
           onClick={() => onChange(value)}
-          className={`px-5 py-3 rounded-lg font-medium transition-all duration-200 ${
+          className={`px-5 py-3 rounded-xl font-medium transition-all duration-300 ${
             selected === value
-              ? 'bg-spotify-green text-white shadow-lg'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-gradient-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong border border-white/20'
+              : 'bg-white/5 text-gray-300 hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20 hover:shadow-glass'
           }`}
         >
           <div className="text-left">
