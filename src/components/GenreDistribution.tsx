@@ -3,6 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { spotifyService } from '../services/spotify';
 import type { TimeRange } from '../types/spotify';
 import LoadingSpinner from './LoadingSpinner';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface GenreDistributionProps {
   timeRange: TimeRange;
@@ -25,6 +26,7 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
   const [genreData, setGenreData] = useState<{ name: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchGenres = async () => {
@@ -63,21 +65,32 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
   if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
   if (genreData.length === 0) return <div className="text-gray-400 text-center p-4">No genre data available</div>;
 
+  // Custom label renderer - only show on desktop
+  const renderLabel = !isMobile
+    ? (props: any) => {
+        const { name, percent } = props;
+        const percentValue = ((percent ?? 0) * 100).toFixed(0);
+        return `${name?.length > 12 ? name.substring(0, 12) + '...' : name} (${percentValue}%)`;
+      }
+    : undefined;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="card">
-        <h3 className="text-xl font-bold mb-4">Genre Distribution</h3>
-        <ResponsiveContainer width="100%" height={400}>
+        <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Genre Distribution</h3>
+        <ResponsiveContainer width="100%" height={isMobile ? 280 : 400}>
           <PieChart>
             <Pie
               data={genreData}
               cx="50%"
               cy="50%"
-              labelLine={false}
-              label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
-              outerRadius={120}
+              labelLine={!isMobile}
+              label={renderLabel}
+              outerRadius={isMobile ? 80 : 120}
+              innerRadius={isMobile ? 40 : 0}
               fill="#8884d8"
               dataKey="value"
+              paddingAngle={isMobile ? 2 : 0}
             >
               {genreData.map((_entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -85,32 +98,34 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
             </Pie>
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
+                backgroundColor: 'rgba(31, 41, 55, 0.95)',
+                border: '1px solid rgba(55, 65, 81, 0.8)',
                 borderRadius: '8px',
+                backdropFilter: 'blur(10px)',
               }}
             />
-            <Legend />
+            {!isMobile && <Legend />}
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Genre List - More prominent on mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
         {genreData.map((genre, index) => (
           <div key={genre.name} className="card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                 <div
-                  className="w-4 h-4 rounded-full"
+                  className="w-3 h-3 md:w-4 md:h-4 rounded-full shrink-0 ring-2 ring-white/20"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
-                <div>
-                  <h4 className="font-semibold capitalize">{genre.name}</h4>
-                  <p className="text-sm text-gray-400">{genre.value} artists</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold capitalize text-sm md:text-base truncate">{genre.name}</h4>
+                  <p className="text-xs md:text-sm text-gray-400">{genre.value} artists</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-lg font-bold text-spotify-green">
+              <div className="text-right shrink-0">
+                <span className="text-base md:text-lg font-bold bg-gradient-to-r from-spotify-green to-spotify-green-light bg-clip-text text-transparent">
                   {((genre.value / genreData.reduce((sum, g) => sum + g.value, 0)) * 100).toFixed(1)}%
                 </span>
               </div>
