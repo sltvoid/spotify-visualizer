@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { spotifyService } from '../services/spotify';
 import type { TimeRange } from '../types/spotify';
 import LoadingSpinner from './LoadingSpinner';
@@ -65,32 +65,23 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
   if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
   if (genreData.length === 0) return <div className="text-gray-400 text-center p-4">No genre data available</div>;
 
-  // Custom label renderer - only show on desktop
-  const renderLabel = !isMobile
-    ? (props: any) => {
-        const { name, percent } = props;
-        const percentValue = ((percent ?? 0) * 100).toFixed(0);
-        return `${name?.length > 12 ? name.substring(0, 12) + '...' : name} (${percentValue}%)`;
-      }
-    : undefined;
-
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="card">
         <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Genre Distribution</h3>
-        <ResponsiveContainer width="100%" height={isMobile ? 240 : 400}>
+        <ResponsiveContainer width="100%" height={isMobile ? 200 : 350}>
           <PieChart>
             <Pie
               data={genreData}
               cx="50%"
               cy="50%"
-              labelLine={!isMobile}
-              label={renderLabel}
-              outerRadius={isMobile ? 65 : 120}
-              innerRadius={isMobile ? 35 : 0}
+              labelLine={false}
+              label={false}
+              outerRadius={isMobile ? 55 : 100}
+              innerRadius={isMobile ? 30 : 50}
               fill="#8884d8"
               dataKey="value"
-              paddingAngle={isMobile ? 2 : 0}
+              paddingAngle={2}
             >
               {genreData.map((_entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -100,11 +91,16 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
               contentStyle={{
                 backgroundColor: 'rgba(31, 41, 55, 0.95)',
                 border: '1px solid rgba(55, 65, 81, 0.8)',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 backdropFilter: 'blur(10px)',
+                padding: '8px 12px',
+              }}
+              formatter={(value: number, name: string) => {
+                const total = genreData.reduce((sum, g) => sum + g.value, 0);
+                const percent = ((value / total) * 100).toFixed(1);
+                return [`${value} artists (${percent}%)`, name];
               }}
             />
-            {!isMobile && <Legend />}
           </PieChart>
         </ResponsiveContainer>
       </div>

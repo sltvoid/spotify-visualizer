@@ -4,6 +4,7 @@ import { ExternalLink } from 'lucide-react';
 import { spotifyService } from '../services/spotify';
 import type { SpotifyArtist, TimeRange } from '../types/spotify';
 import LoadingSpinner from './LoadingSpinner';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 interface TopArtistsProps {
   timeRange: TimeRange;
@@ -13,6 +14,7 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
   const [artists, setArtists] = useState<SpotifyArtist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchArtists = async () => {
@@ -45,17 +47,33 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
     <div className="space-y-6">
       {/* Chart */}
       <div className="card">
-        <h3 className="text-xl font-bold mb-4">Popularity Chart</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
+        <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Popularity Chart</h3>
+        <ResponsiveContainer width="100%" height={isMobile ? 250 : 300}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 5, right: 10, left: isMobile ? -10 : 0, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="name" stroke="#9CA3AF" angle={-45} textAnchor="end" height={100} />
-            <YAxis stroke="#9CA3AF" />
+            <XAxis
+              dataKey="name"
+              stroke="#9CA3AF"
+              angle={-45}
+              textAnchor="end"
+              height={isMobile ? 80 : 100}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
+            />
+            <YAxis
+              stroke="#9CA3AF"
+              width={isMobile ? 30 : 40}
+              tick={{ fontSize: isMobile ? 10 : 12 }}
+            />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
+                backgroundColor: 'rgba(31, 41, 55, 0.95)',
+                border: '1px solid rgba(55, 65, 81, 0.8)',
+                borderRadius: '12px',
+                backdropFilter: 'blur(10px)',
+                padding: '8px 12px',
               }}
             />
             <Bar dataKey="popularity" fill="#1DB954" radius={[8, 8, 0, 0]} />
