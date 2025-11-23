@@ -14,12 +14,16 @@ import AdvancedAudioAnalysis from '../components/AdvancedAudioAnalysis';
 import Playlists from '../components/Playlists';
 import SpotifyLogo from '../components/SpotifyLogo';
 import ListeningInsights from '../components/ListeningInsights';
+import MobileTabBar from '../components/MobileTabBar';
+import MobileHeader from '../components/MobileHeader';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 type TabId = 'overview' | 'insights' | 'artists' | 'tracks' | 'albums' | 'recent' | 'library' | 'playlists' | 'features' | 'genres' | 'advanced';
 
 export default function Dashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('medium_term');
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const isMobile = useIsMobile();
 
   const tabs: { id: TabId; label: string }[] = [
     { id: 'overview', label: 'Overview' },
@@ -39,94 +43,122 @@ export default function Dashboard() {
   const noTimeRangeTabs: TabId[] = ['recent', 'library', 'playlists'];
 
   return (
-    <div className="min-h-screen p-4 md:p-8 relative z-10">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-1 animate-float">
-            <SpotifyLogo size={64} className="text-spotify-green drop-shadow-[0_0_15px_rgba(29,185,84,0.5)]" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-1 bg-gradient-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-transparent drop-shadow-lg">
-            Your Spotify Stats
-          </h1>
-          <p className="text-gray-300">Discover your music insights and listening habits</p>
-        </div>
+    <div className="min-h-screen relative z-10">
+      {/* Mobile Layout */}
+      {isMobile ? (
+        <>
+          {/* Mobile Header with Menu */}
+          <MobileHeader
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            allTabs={tabs}
+          />
 
-        {/* User Profile */}
-        <UserProfile />
-
-        {/* Tabs */}
-        <div className="card overflow-x-auto">
-          <div className="flex gap-2 pb-2 min-w-max">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'bg-gradient-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong border border-white/20'
-                    : 'bg-white/5 text-gray-300 hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Time Range Selector (shown inline for relevant tabs) */}
-          {!noTimeRangeTabs.includes(activeTab) && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <h3 className="text-sm font-semibold mb-3 text-gray-300">Time Period</h3>
-              <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div>
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              <ListeningStats timeRange={timeRange} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="card">
-                  <h3 className="text-xl font-bold mb-4">Top Artists Preview</h3>
-                  <TopArtists timeRange={timeRange} />
-                </div>
-                <div className="card">
-                  <h3 className="text-xl font-bold mb-4">Genre Distribution Preview</h3>
-                  <GenreDistribution timeRange={timeRange} />
-                </div>
+          {/* Mobile Content with bottom padding for tab bar */}
+          <div className="p-4 pb-24 space-y-4">
+            {/* Time Range Selector for Mobile (shown above content) */}
+            {!noTimeRangeTabs.includes(activeTab) && (
+              <div className="card">
+                <h3 className="text-sm font-semibold mb-3 text-gray-300">Time Period</h3>
+                <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
               </div>
+            )}
+
+            {/* Content */}
+            {renderContent()}
+          </div>
+
+          {/* Mobile Bottom Tab Bar */}
+          <MobileTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        </>
+      ) : (
+        /* Desktop Layout */
+        <div className="p-4 md:p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Desktop Header */}
+            <div className="text-center mb-8">
+              <div className="flex justify-center mb-1 animate-float">
+                <SpotifyLogo size={64} className="text-spotify-green drop-shadow-[0_0_15px_rgba(29,185,84,0.5)]" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-bold mb-1 bg-gradient-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-transparent drop-shadow-lg">
+                Your Spotify Stats
+              </h1>
+              <p className="text-gray-300">Discover your music insights and listening habits</p>
             </div>
-          )}
 
-          {activeTab === 'insights' && <ListeningInsights timeRange={timeRange} />}
+            {/* User Profile */}
+            <UserProfile />
 
-          {activeTab === 'artists' && <TopArtists timeRange={timeRange} />}
+            {/* Desktop Tabs */}
+            <div className="card overflow-x-auto">
+              <div className="flex gap-2 pb-2 min-w-max">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-300 ${
+                      activeTab === tab.id
+                        ? 'bg-gradient-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong border border-white/20'
+                        : 'bg-white/5 text-gray-300 hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-          {activeTab === 'tracks' && <TopTracks timeRange={timeRange} />}
+              {/* Time Range Selector (shown inline for relevant tabs) */}
+              {!noTimeRangeTabs.includes(activeTab) && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <h3 className="text-sm font-semibold mb-3 text-gray-300">Time Period</h3>
+                  <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+                </div>
+              )}
+            </div>
 
-          {activeTab === 'albums' && <TopAlbums timeRange={timeRange} />}
+            {/* Content */}
+            {renderContent()}
 
-          {activeTab === 'library' && <SavedLibrary />}
-
-          {activeTab === 'playlists' && <Playlists />}
-
-          {activeTab === 'recent' && <RecentlyPlayed />}
-
-          {activeTab === 'features' && <AudioFeatures timeRange={timeRange} />}
-
-          {activeTab === 'advanced' && <AdvancedAudioAnalysis timeRange={timeRange} />}
-
-          {activeTab === 'genres' && <GenreDistribution timeRange={timeRange} />}
+            {/* Footer */}
+            <div className="text-center text-gray-500 text-sm py-8">
+              <p>Made with Spotify Web API</p>
+              <p className="mt-2">Your data is never stored or shared</p>
+            </div>
+          </div>
         </div>
-
-        {/* Footer */}
-        <div className="text-center text-gray-500 text-sm py-8">
-          <p>Made with Spotify Web API</p>
-          <p className="mt-2">Your data is never stored or shared</p>
-        </div>
-      </div>
+      )}
     </div>
   );
+
+  // Helper function to render content based on active tab
+  function renderContent() {
+    if (activeTab === 'overview') {
+      return (
+        <div className="space-y-6">
+          <ListeningStats timeRange={timeRange} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="card">
+              <h3 className="text-xl font-bold mb-4">Top Artists Preview</h3>
+              <TopArtists timeRange={timeRange} />
+            </div>
+            <div className="card">
+              <h3 className="text-xl font-bold mb-4">Genre Distribution Preview</h3>
+              <GenreDistribution timeRange={timeRange} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (activeTab === 'insights') return <ListeningInsights timeRange={timeRange} />;
+    if (activeTab === 'artists') return <TopArtists timeRange={timeRange} />;
+    if (activeTab === 'tracks') return <TopTracks timeRange={timeRange} />;
+    if (activeTab === 'albums') return <TopAlbums timeRange={timeRange} />;
+    if (activeTab === 'library') return <SavedLibrary />;
+    if (activeTab === 'playlists') return <Playlists />;
+    if (activeTab === 'recent') return <RecentlyPlayed />;
+    if (activeTab === 'features') return <AudioFeatures timeRange={timeRange} />;
+    if (activeTab === 'advanced') return <AdvancedAudioAnalysis timeRange={timeRange} />;
+    if (activeTab === 'genres') return <GenreDistribution timeRange={timeRange} />;
+    return null;
+  }
 }
