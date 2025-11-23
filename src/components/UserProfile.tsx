@@ -46,7 +46,60 @@ export default function UserProfile() {
 
   return (
     <div className="card">
-      <div className="flex items-start justify-between gap-4">
+      {/* Mobile Layout */}
+      <div className="md:hidden space-y-4">
+        <div className="flex items-center gap-3">
+          {profile.images && profile.images[0] ? (
+            <img
+              src={profile.images[0].url}
+              alt={profile.display_name}
+              className="w-14 h-14 rounded-full object-cover ring-2 ring-white/20 shadow-lg"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/20">
+              <User size={28} className="text-gray-400" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold truncate">{profile.display_name}</h2>
+            <p className="text-sm text-gray-400 truncate">{profile.email}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 text-center text-xs">
+          <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+            <div className="font-bold text-white">{profile.followers.total}</div>
+            <div className="text-gray-400">Followers</div>
+          </div>
+          <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+            <div className="font-bold text-white">{profile.country}</div>
+            <div className="text-gray-400">Country</div>
+          </div>
+          <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+            <div className="font-bold text-white capitalize">{profile.product}</div>
+            <div className="text-gray-400">Plan</div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <a
+            href={profile.external_urls.spotify}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm"
+          >
+            <ExternalLink size={14} />
+            Profile
+          </a>
+          <button onClick={logout} className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm">
+            <LogOut size={14} />
+            Logout
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           {profile.images && profile.images[0] ? (
             <img

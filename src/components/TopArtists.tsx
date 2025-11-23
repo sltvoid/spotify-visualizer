@@ -64,37 +64,37 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
       </div>
 
       {/* Artist Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
         {artists.map((artist, index) => (
           <div key={artist.id} className="card transition-all duration-300">
-            <div className="flex items-start gap-4">
-              <div className="relative">
-                <span className="absolute -top-2 -left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-white/20">
+            <div className="flex items-start gap-2.5 md:gap-4">
+              <div className="relative shrink-0">
+                <span className="absolute -top-1.5 -left-1.5 md:-top-2 md:-left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-6 h-6 md:w-7 md:h-7 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-white/20">
                   {index + 1}
                 </span>
                 {artist.images && artist.images[0] ? (
                   <img
                     src={artist.images[0].url}
                     alt={artist.name}
-                    className="w-16 h-16 rounded-full object-cover ring-2 ring-white/10 shadow-md"
+                    className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover ring-2 ring-white/10 shadow-md"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
-                    <span className="text-2xl">🎵</span>
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
+                    <span className="text-xl md:text-2xl">🎵</span>
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold truncate">{artist.name}</h4>
+                <h4 className="font-semibold text-sm md:text-base truncate leading-tight">{artist.name}</h4>
                 {artist.genres && artist.genres.length > 0 && (
-                  <p className="text-sm text-gray-400 truncate">
+                  <p className="text-xs md:text-sm text-gray-400 truncate mt-0.5">
                     {artist.genres.slice(0, 2).join(', ')}
                   </p>
                 )}
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+                <div className="flex items-center gap-2 mt-1.5 md:mt-2">
+                  <div className="flex-1 bg-white/10 rounded-full h-1.5 md:h-2 overflow-hidden backdrop-blur-sm">
                     <div
-                      className="bg-gradient-to-r from-spotify-green to-spotify-green-light h-2 rounded-full shadow-glow-green transition-all duration-500"
+                      className="bg-gradient-to-r from-spotify-green to-spotify-green-light h-full rounded-full shadow-glow-green transition-all duration-500"
                       style={{ width: `${artist.popularity}%` }}
                     />
                   </div>
@@ -105,9 +105,9 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
                 href={artist.external_urls.spotify}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-400 hover:text-spotify-green transition-colors"
+                className="text-gray-400 hover:text-spotify-green transition-colors shrink-0"
               >
-                <ExternalLink size={16} />
+                <ExternalLink size={14} className="md:w-4 md:h-4" />
               </a>
             </div>
           </div>

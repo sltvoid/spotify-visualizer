@@ -55,11 +55,11 @@ export default function Dashboard() {
           />
 
           {/* Mobile Content with bottom padding for tab bar */}
-          <div className="p-4 pb-24 space-y-4">
+          <div className="px-3 py-3 pb-24 space-y-3">
             {/* Time Range Selector for Mobile (shown above content) */}
             {!noTimeRangeTabs.includes(activeTab) && (
               <div className="card">
-                <h3 className="text-sm font-semibold mb-3 text-gray-300">Time Period</h3>
+                <h3 className="text-xs font-semibold mb-2.5 text-gray-300 uppercase tracking-wide">Time Period</h3>
                 <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
               </div>
             )}
