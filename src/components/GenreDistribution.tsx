@@ -78,7 +78,7 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
     <div className="space-y-4 md:space-y-6">
       <div className="card">
         <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">Genre Distribution</h3>
-        <ResponsiveContainer width="100%" height={isMobile ? 280 : 400}>
+        <ResponsiveContainer width="100%" height={isMobile ? 240 : 400}>
           <PieChart>
             <Pie
               data={genreData}
@@ -86,8 +86,8 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
               cy="50%"
               labelLine={!isMobile}
               label={renderLabel}
-              outerRadius={isMobile ? 80 : 120}
-              innerRadius={isMobile ? 40 : 0}
+              outerRadius={isMobile ? 65 : 120}
+              innerRadius={isMobile ? 35 : 0}
               fill="#8884d8"
               dataKey="value"
               paddingAngle={isMobile ? 2 : 0}
