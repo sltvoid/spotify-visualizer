@@ -43,8 +43,32 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Chart */}
-      <div className="card">
+      {/* Mobile View - Compact List */}
+      <div className="card md:hidden">
+        <h3 className="text-xl font-bold mb-4">Top Artists by Popularity</h3>
+        <div className="space-y-3">
+          {artists.slice(0, 10).map((artist, index) => (
+            <div key={artist.id} className="flex items-center gap-3">
+              <span className="text-spotify-green font-bold text-sm w-6">{index + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-sm truncate">{artist.name}</span>
+                  <span className="text-xs text-gray-400 ml-2">{artist.popularity}</span>
+                </div>
+                <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-spotify-green to-spotify-green-light h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${artist.popularity}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop View - Chart */}
+      <div className="card hidden md:block">
         <h3 className="text-xl font-bold mb-4">Popularity Chart</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>

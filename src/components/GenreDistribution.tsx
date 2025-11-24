@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { spotifyService } from '../services/spotify';
 import type { TimeRange } from '../types/spotify';
 import LoadingSpinner from './LoadingSpinner';
@@ -63,9 +63,44 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
   if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
   if (genreData.length === 0) return <div className="text-gray-400 text-center p-4">No genre data available</div>;
 
+  const totalValue = genreData.reduce((sum, g) => sum + g.value, 0);
+
   return (
     <div className="space-y-6">
-      <div className="card">
+      {/* Mobile View - List with Progress Bars */}
+      <div className="card md:hidden">
+        <h3 className="text-xl font-bold mb-4">Genre Distribution</h3>
+        <div className="space-y-3">
+          {genreData.map((genre, index) => (
+            <div key={genre.name} className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <span className="font-medium capitalize">{genre.name}</span>
+                </div>
+                <span className="text-spotify-green font-semibold">
+                  {((genre.value / totalValue) * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    backgroundColor: COLORS[index % COLORS.length],
+                    width: `${(genre.value / totalValue) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop View - Pie Chart */}
+      <div className="card hidden md:block">
         <h3 className="text-xl font-bold mb-4">Genre Distribution</h3>
         <ResponsiveContainer width="100%" height={400}>
           <PieChart>
@@ -73,8 +108,8 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
               data={genreData}
               cx="50%"
               cy="50%"
-              labelLine={false}
-              label={false}
+              labelLine={true}
+              label={({ name, value, percent }) => `#${genreData.findIndex(g => g.name === name) + 1} ${name} (${value} - ${((percent ?? 0) * 100).toFixed(1)}%)`}
               outerRadius={120}
               fill="#8884d8"
               dataKey="value"
@@ -90,12 +125,12 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
                 borderRadius: '8px',
               }}
             />
-            <Legend />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Desktop Detail Grid */}
+      <div className="hidden md:grid md:grid-cols-2 gap-4">
         {genreData.map((genre, index) => (
           <div key={genre.name} className="card">
             <div className="flex items-center justify-between">
