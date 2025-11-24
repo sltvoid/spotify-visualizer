@@ -109,7 +109,7 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
               cx="50%"
               cy="50%"
               labelLine={true}
-              label={({ name, value, percent }) => `#${genreData.findIndex(g => g.name === name) + 1} ${name} (${value} - ${((percent ?? 0) * 100).toFixed(1)}%)`}
+              label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(1)}%)`}
               outerRadius={120}
               fill="#8884d8"
               dataKey="value"
@@ -119,10 +119,19 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
               ))}
             </Pie>
             <Tooltip
-              contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
+              content={({ payload }) => {
+                if (payload && payload.length > 0) {
+                  const data = payload[0];
+                  const rank = genreData.findIndex(g => g.name === data.name) + 1;
+                  return (
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-lg">
+                      <p className="font-bold text-spotify-green">#{rank} {data.name}</p>
+                      <p className="text-sm text-gray-300">Artists: {data.value}</p>
+                      <p className="text-sm text-gray-300">Percentage: {((data.payload.percent ?? 0) * 100).toFixed(1)}%</p>
+                    </div>
+                  );
+                }
+                return null;
               }}
             />
           </PieChart>
