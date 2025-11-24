@@ -82,7 +82,7 @@ export default function Dashboard() {
           </div>
 
           {/* Desktop: Tab Buttons */}
-          <div className="hidden md:flex gap-2 flex-wrap">
+          <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
