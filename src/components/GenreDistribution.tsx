@@ -90,12 +90,11 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
                 borderRadius: '8px',
               }}
             />
-            <Legend />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="hidden md:grid md:grid-cols-2 gap-4">
         {genreData.map((genre, index) => (
           <div key={genre.name} className="card">
             <div className="flex items-center justify-between">
