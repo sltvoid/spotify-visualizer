@@ -9,16 +9,16 @@ interface GenreDistributionProps {
 }
 
 const COLORS = [
-  '#1DB954',
-  '#1ED760',
-  '#2EBD59',
-  '#1AA34A',
-  '#158940',
-  '#117A37',
-  '#0D6B2E',
-  '#095C25',
-  '#05481C',
-  '#023913',
+  '#1DB954', // Spotify green
+  '#1ED760', // Light green
+  '#3B82F6', // Blue
+  '#8B5CF6', // Purple
+  '#EF4444', // Red
+  '#F59E0B', // Amber
+  '#10B981', // Emerald
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#6366F1', // Indigo
 ];
 
 export default function GenreDistribution({ timeRange }: GenreDistributionProps) {
