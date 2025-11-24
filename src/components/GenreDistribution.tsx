@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { spotifyService } from '../services/spotify';
 import type { TimeRange } from '../types/spotify';
 import LoadingSpinner from './LoadingSpinner';
