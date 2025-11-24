@@ -93,8 +93,8 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
           <div key={artist.id} className="card transition-all duration-300">
             <div className="flex items-start gap-4">
               <div className="relative">
-                <span className="absolute -top-2 -left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-white/20">
-                  {index + 1}
+                <span className="absolute -top-2 -left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-gray-900 shadow-[0_0_0_3px_rgba(255,255,255,0.9)]">
+                  <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{index + 1}</span>
                 </span>
                 {artist.images && artist.images[0] ? (
                   <img

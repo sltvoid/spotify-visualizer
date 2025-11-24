@@ -64,8 +64,25 @@ export default function Dashboard() {
         )}
 
         {/* Tabs */}
-        <div className="card overflow-x-auto">
-          <div className="flex gap-2 pb-2 min-w-max">
+        <div className="card">
+          {/* Mobile: Dropdown Select */}
+          <div className="md:hidden">
+            <label className="block text-sm font-medium text-gray-400 mb-2">Section</label>
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as TabId)}
+              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-medium focus:outline-none focus:ring-2 focus:ring-spotify-green focus:border-transparent"
+            >
+              {tabs.map((tab) => (
+                <option key={tab.id} value={tab.id} className="bg-gray-800">
+                  {tab.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Desktop: Tab Buttons */}
+          <div className="hidden md:flex gap-2 flex-wrap">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
