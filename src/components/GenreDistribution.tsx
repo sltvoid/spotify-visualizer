@@ -108,8 +108,8 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
               data={genreData}
               cx="50%"
               cy="50%"
-              labelLine={false}
-              label={false}
+              labelLine={true}
+              label={({ name, value, percent }) => `#${genreData.findIndex(g => g.name === name) + 1} ${name} (${value} - ${((percent ?? 0) * 100).toFixed(1)}%)`}
               outerRadius={120}
               fill="#8884d8"
               dataKey="value"
