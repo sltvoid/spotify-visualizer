@@ -133,33 +133,38 @@ interface ArtistCardProps {
 function ArtistCard({ artist, rank }: ArtistCardProps) {
   return (
     <div className="card transition-all duration-300" role="listitem">
-      <div className="flex items-start gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
+        {/* Rank Number - Separate Column */}
+        <div className="flex-shrink-0 w-8 text-center">
           <span
-            className="bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-glow-green flex-shrink-0"
+            className="text-2xl font-bold text-spotify-green"
             aria-label={`Ranked number ${rank}`}
           >
             {rank}
           </span>
-          {artist.images && artist.images[0] ? (
-            <img
-              src={artist.images[0].url}
-              alt={`Profile photo of ${artist.name}`}
-              className="w-14 h-14 rounded-full object-cover ring-2 ring-white/10 shadow-md"
-              loading="lazy"
-            />
-          ) : (
-            <div
-              className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10"
-              aria-label="No profile photo available"
-            >
-              <span className="text-2xl" aria-hidden="true">
-                🎵
-              </span>
-            </div>
-          )}
         </div>
-        <div className="flex-1 min-w-0 ml-1">
+
+        {/* Artist Image */}
+        {artist.images && artist.images[0] ? (
+          <img
+            src={artist.images[0].url}
+            alt={`Profile photo of ${artist.name}`}
+            className="w-14 h-14 rounded-full object-cover ring-2 ring-white/10 shadow-md flex-shrink-0"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10 flex-shrink-0"
+            aria-label="No profile photo available"
+          >
+            <span className="text-2xl" aria-hidden="true">
+              🎵
+            </span>
+          </div>
+        )}
+
+        {/* Artist Info */}
+        <div className="flex-1 min-w-0">
           <h4 className="font-semibold truncate">{artist.name}</h4>
           {artist.genres && artist.genres.length > 0 && (
             <p className="text-sm text-gray-400 truncate">{artist.genres.slice(0, 2).join(', ')}</p>
@@ -181,11 +186,13 @@ function ArtistCard({ artist, rank }: ArtistCardProps) {
             <span className="text-xs text-gray-300 font-medium">{artist.popularity}</span>
           </div>
         </div>
+
+        {/* Spotify Link */}
         <a
           href={artist.external_urls.spotify}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-400 hover:text-spotify-green transition-colors"
+          className="text-gray-400 hover:text-spotify-green transition-colors flex-shrink-0"
           aria-label={`Open ${artist.name} on Spotify (opens in new tab)`}
         >
           <ExternalLink size={16} aria-hidden="true" />
