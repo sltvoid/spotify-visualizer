@@ -1,66 +1,49 @@
-import { useState, useEffect } from 'react';
 import { ExternalLink, Music, Clock } from 'lucide-react';
 import { spotifyService } from '../services/spotify';
 import type { RecentlyPlayedTrack } from '../types/spotify';
+import { useDataFetch } from '../hooks';
+import { formatRelativeTime } from '../utils/formatters';
+import { DEFAULT_LIMIT } from '../constants';
 import LoadingSpinner from './LoadingSpinner';
+import { ErrorMessage } from './ErrorBoundary';
 
 export default function RecentlyPlayed() {
-  const [tracks, setTracks] = useState<RecentlyPlayedTrack[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTracks = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getRecentlyPlayed(50);
-        setTracks(data.items);
-      } catch (err) {
-        setError('Failed to load recently played tracks');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTracks();
-  }, []);
+  const { data, loading, error, refetch } = useDataFetch<RecentlyPlayedTrack[]>(
+    async () => {
+      const response = await spotifyService.getRecentlyPlayed(DEFAULT_LIMIT);
+      return response.items;
+    },
+    []
+  );
 
   if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
-
-  const formatPlayedAt = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
+  if (error) return <ErrorMessage message={error} onRetry={refetch} />;
+  if (!data || data.length === 0) {
+    return <div className="text-gray-400 text-center p-4">No recently played tracks</div>;
+  }
 
   return (
-    <div className="space-y-3">
-      {tracks.map((item, index) => (
+    <div className="space-y-3" role="list" aria-label="Recently played tracks">
+      {data.map((item, index) => (
         <div
           key={`${item.track.id}-${index}`}
           className="card hover:bg-gray-700/50 transition-all duration-200"
+          role="listitem"
         >
           <div className="flex items-center gap-4">
             {item.track.album.images[0] ? (
               <img
                 src={item.track.album.images[0].url}
-                alt={item.track.album.name}
+                alt={`Album cover for ${item.track.album.name}`}
                 className="w-14 h-14 rounded object-cover"
+                loading="lazy"
               />
             ) : (
-              <div className="w-14 h-14 rounded bg-gray-700 flex items-center justify-center">
-                <Music className="text-gray-500" size={20} />
+              <div
+                className="w-14 h-14 rounded bg-gray-700 flex items-center justify-center"
+                aria-label="No album cover available"
+              >
+                <Music className="text-gray-500" size={20} aria-hidden="true" />
               </div>
             )}
 
@@ -74,8 +57,8 @@ export default function RecentlyPlayed() {
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
                 <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Clock size={12} />
-                  {formatPlayedAt(item.played_at)}
+                  <Clock size={12} aria-hidden="true" />
+                  <time dateTime={item.played_at}>{formatRelativeTime(item.played_at)}</time>
                 </div>
               </div>
 
@@ -84,8 +67,9 @@ export default function RecentlyPlayed() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-spotify-green transition-colors"
+                aria-label={`Open ${item.track.name} on Spotify (opens in new tab)`}
               >
-                <ExternalLink size={18} />
+                <ExternalLink size={18} aria-hidden="true" />
               </a>
             </div>
           </div>

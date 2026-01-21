@@ -1,34 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { ExternalLink, User, LogOut } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
-import type { UserProfile as UserProfileType } from '../types/spotify';
+import { useSpotifyData } from '../contexts';
 import { logout } from '../utils/auth';
 import LoadingSpinner from './LoadingSpinner';
+import { ErrorMessage } from './ErrorBoundary';
 
 export default function UserProfile() {
-  const [profile, setProfile] = useState<UserProfileType | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { userProfile, fetchUserProfile, loading, errors } = useSpotifyData();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getUserProfile();
-        setProfile(data);
-      } catch (err) {
-        setError('Failed to load user profile');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchUserProfile();
+  }, [fetchUserProfile]);
 
-    fetchProfile();
-  }, []);
-
-  if (loading) {
+  if (loading.profile) {
     return (
       <div className="card">
         <LoadingSpinner />
@@ -36,60 +20,78 @@ export default function UserProfile() {
     );
   }
 
-  if (error || !profile) {
+  if (errors.profile || !userProfile) {
     return (
       <div className="card">
-        <div className="text-red-400 text-center">{error || 'Profile not found'}</div>
+        <ErrorMessage
+          message={errors.profile || 'Failed to load profile'}
+          onRetry={fetchUserProfile}
+        />
       </div>
     );
   }
 
   return (
-    <div className="card">
-      <div className="flex items-start justify-between gap-4">
+    <div className="card" role="region" aria-label="User profile">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          {profile.images && profile.images[0] ? (
+          {userProfile.images && userProfile.images[0] ? (
             <img
-              src={profile.images[0].url}
-              alt={profile.display_name}
+              src={userProfile.images[0].url}
+              alt={`Profile photo of ${userProfile.display_name}`}
               className="w-16 h-16 rounded-full object-cover ring-2 ring-white/20 shadow-lg"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/20">
-              <User size={32} className="text-gray-400" />
+            <div
+              className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/20"
+              aria-label="No profile photo"
+            >
+              <User size={32} className="text-gray-400" aria-hidden="true" />
             </div>
           )}
 
           <div>
-            <h2 className="text-2xl font-bold">{profile.display_name}</h2>
-            <p className="text-gray-400">{profile.email}</p>
-            <div className="flex items-center gap-4 mt-2 text-sm">
+            <h2 className="text-2xl font-bold">{userProfile.display_name}</h2>
+            <p className="text-gray-400">{userProfile.email}</p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm">
               <span className="text-gray-400">
-                <span className="font-semibold text-white">{profile.followers.total}</span> followers
+                <span className="font-semibold text-white">
+                  {userProfile.followers.total.toLocaleString()}
+                </span>{' '}
+                followers
               </span>
               <span className="text-gray-400">
-                Country: <span className="font-semibold text-white">{profile.country}</span>
+                Country:{' '}
+                <span className="font-semibold text-white">{userProfile.country}</span>
               </span>
               <span className="text-gray-400">
-                Plan: <span className="font-semibold text-white capitalize">{profile.product}</span>
+                Plan:{' '}
+                <span className="font-semibold text-white capitalize">
+                  {userProfile.product}
+                </span>
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <a
-            href={profile.external_urls.spotify}
+            href={userProfile.external_urls.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-initial"
+            aria-label="Open Spotify profile (opens in new tab)"
           >
-            <ExternalLink size={16} />
-            Profile
+            <ExternalLink size={16} aria-hidden="true" />
+            <span>Profile</span>
           </a>
-          <button onClick={logout} className="btn-secondary flex items-center gap-2">
-            <LogOut size={16} />
-            Logout
+          <button
+            onClick={logout}
+            className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-initial"
+            aria-label="Log out of your account"
+          >
+            <LogOut size={16} aria-hidden="true" />
+            <span>Logout</span>
           </button>
         </div>
       </div>
