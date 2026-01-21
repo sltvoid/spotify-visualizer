@@ -8,6 +8,7 @@ import { ErrorMessage } from './ErrorBoundary';
 
 interface GenreDistributionProps {
   timeRange: TimeRange;
+  preview?: boolean;
 }
 
 const GENRE_COLORS = [
@@ -29,7 +30,7 @@ interface GenreData {
   [key: string]: string | number;
 }
 
-export default function GenreDistribution({ timeRange }: GenreDistributionProps) {
+export default function GenreDistribution({ timeRange, preview = false }: GenreDistributionProps) {
   const { fetchTopArtists, getArtists, loading, errors } = useSpotifyData();
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -74,6 +75,35 @@ export default function GenreDistribution({ timeRange }: GenreDistributionProps)
     return <div className="text-gray-400 text-center p-4">No genre data available</div>;
   }
 
+  // Preview mode - simplified list for overview page
+  if (preview) {
+    return (
+      <div className="space-y-3" role="list" aria-label="Genre distribution preview">
+        {genreData.slice(0, 5).map((genre, index) => {
+          const percentage = ((genre.value / totalValue) * 100).toFixed(1);
+          return (
+            <div
+              key={genre.name}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+              role="listitem"
+            >
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: GENRE_COLORS[index % GENRE_COLORS.length] }}
+                aria-hidden="true"
+              />
+              <span className="flex-1 font-medium capitalize truncate">{genre.name}</span>
+              <span className="text-sm text-spotify-green font-semibold flex-shrink-0">
+                {percentage}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Full view
   return (
     <div className="space-y-6">
       {/* Mobile View - List with Progress Bars */}

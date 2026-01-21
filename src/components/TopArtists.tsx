@@ -17,9 +17,10 @@ import { ErrorMessage } from './ErrorBoundary';
 
 interface TopArtistsProps {
   timeRange: TimeRange;
+  preview?: boolean;
 }
 
-export default function TopArtists({ timeRange }: TopArtistsProps) {
+export default function TopArtists({ timeRange, preview = false }: TopArtistsProps) {
   const { fetchTopArtists, getArtists, loading, errors } = useSpotifyData();
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -55,6 +56,48 @@ export default function TopArtists({ timeRange }: TopArtistsProps) {
     return <div className="text-gray-400 text-center p-4">No artist data available</div>;
   }
 
+  // Preview mode - simplified list for overview page
+  if (preview) {
+    return (
+      <div className="space-y-3" role="list" aria-label="Top artists preview">
+        {artists.slice(0, 5).map((artist, index) => (
+          <div
+            key={artist.id}
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+            role="listitem"
+          >
+            <span
+              className="flex-shrink-0 w-8 text-xl font-bold text-spotify-green text-right tabular-nums"
+              aria-label={`Rank ${index + 1}`}
+            >
+              {index + 1}
+            </span>
+            {artist.images && artist.images[0] ? (
+              <img
+                src={artist.images[0].url}
+                alt={`Profile photo of ${artist.name}`}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-white/10 flex-shrink-0"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center ring-2 ring-white/10 flex-shrink-0">
+                <span className="text-lg" aria-hidden="true">🎵</span>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{artist.name}</p>
+              <p className="text-xs text-gray-400 truncate">
+                {artist.genres?.slice(0, 2).join(', ') || 'Artist'}
+              </p>
+            </div>
+            <span className="text-sm text-gray-400 flex-shrink-0">{artist.popularity}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Full view
   return (
     <div className="space-y-6">
       {/* Mobile View - Compact List */}

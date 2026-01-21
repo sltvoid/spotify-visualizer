@@ -116,11 +116,11 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="card">
                     <h3 className="text-xl font-bold mb-4">Top Artists Preview</h3>
-                    <TopArtists timeRange={timeRange} />
+                    <TopArtists timeRange={timeRange} preview />
                   </div>
                   <div className="card">
                     <h3 className="text-xl font-bold mb-4">Genre Distribution Preview</h3>
-                    <GenreDistribution timeRange={timeRange} />
+                    <GenreDistribution timeRange={timeRange} preview />
                   </div>
                 </div>
               </div>
