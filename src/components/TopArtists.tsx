@@ -133,24 +133,24 @@ interface ArtistCardProps {
 function ArtistCard({ artist, rank }: ArtistCardProps) {
   return (
     <div className="card transition-all duration-300" role="listitem">
-      <div className="flex items-start gap-4">
-        <div className="relative">
+      <div className="flex items-start gap-3">
+        <div className="flex items-center gap-2">
           <span
-            className="absolute -top-2 -left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-gray-900 shadow-[0_0_0_3px_rgba(255,255,255,0.9)]"
+            className="bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center shadow-glow-green flex-shrink-0"
             aria-label={`Ranked number ${rank}`}
           >
-            <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{rank}</span>
+            {rank}
           </span>
           {artist.images && artist.images[0] ? (
             <img
               src={artist.images[0].url}
               alt={`Profile photo of ${artist.name}`}
-              className="w-16 h-16 rounded-full object-cover ring-2 ring-white/10 shadow-md"
+              className="w-14 h-14 rounded-full object-cover ring-2 ring-white/10 shadow-md"
               loading="lazy"
             />
           ) : (
             <div
-              className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10"
+              className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10"
               aria-label="No profile photo available"
             >
               <span className="text-2xl" aria-hidden="true">
@@ -159,7 +159,7 @@ function ArtistCard({ artist, rank }: ArtistCardProps) {
             </div>
           )}
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 ml-1">
           <h4 className="font-semibold truncate">{artist.name}</h4>
           {artist.genres && artist.genres.length > 0 && (
             <p className="text-sm text-gray-400 truncate">{artist.genres.slice(0, 2).join(', ')}</p>
