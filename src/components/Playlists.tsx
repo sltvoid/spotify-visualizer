@@ -1,118 +1,86 @@
-import { useState, useEffect } from 'react';
-import { ExternalLink, List, Lock, Users } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
+import { List, Lock, Users } from 'lucide-react';
 import type { Playlist } from '../types/spotify';
+import { usePlaylists } from '../hooks/useSpotify';
+import { decodeHtmlEntities } from '../utils/formatters';
+import CoverImage from './CoverImage';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
+import SpotifyLink from './SpotifyLink';
+import StatCard from './StatCard';
+
+/** Track count; Spotify renamed `tracks` to `items` in February 2026. */
+function trackCount(playlist: Playlist): number {
+  return playlist.items?.total ?? playlist.tracks?.total ?? 0;
+}
 
 export default function Playlists() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: playlists, isPending, isError, error, refetch } = usePlaylists();
 
-  useEffect(() => {
-    const fetchPlaylists = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getPlaylists(50);
-        setPlaylists(data);
-      } catch (err) {
-        setError('Failed to load playlists');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (playlists.length === 0) return <EmptyState>No playlists found</EmptyState>;
 
-    fetchPlaylists();
-  }, []);
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
-
-  const totalTracks = playlists.reduce((sum, p) => sum + p.tracks.total, 0);
-  const publicPlaylists = playlists.filter((p) => p.public).length;
-  const privatePlaylists = playlists.filter((p) => !p.public).length;
-  const collaborativePlaylists = playlists.filter((p) => p.collaborative).length;
+  const totalTracks = playlists.reduce((sum, p) => sum + trackCount(p), 0);
+  const publicCount = playlists.filter((p) => p.public).length;
+  const collaborativeCount = playlists.filter((p) => p.collaborative).length;
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card">
-          <p className="text-gray-400 text-sm">Total Playlists</p>
-          <p className="text-3xl font-bold text-spotify-green">{playlists.length}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Total Tracks</p>
-          <p className="text-3xl font-bold">{totalTracks}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Public / Private</p>
-          <p className="text-3xl font-bold">{publicPlaylists} / {privatePlaylists}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Collaborative</p>
-          <p className="text-3xl font-bold">{collaborativePlaylists}</p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard label="Total Playlists" value={playlists.length} highlight />
+        <StatCard label="Total Tracks" value={totalTracks.toLocaleString()} />
+        <StatCard
+          label="Public / Private"
+          value={`${publicCount} / ${playlists.length - publicCount}`}
+        />
+        <StatCard label="Collaborative" value={collaborativeCount} />
       </div>
 
-      {/* Playlist Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" aria-label="Playlists">
         {playlists.map((playlist) => (
-          <div key={playlist.id} className="card hover:bg-gray-700/50 transition-all">
-            {playlist.images && playlist.images[0] ? (
-              <img
-                src={playlist.images[0].url}
-                alt={playlist.name}
-                className="w-full aspect-square object-cover rounded-lg mb-4"
-              />
-            ) : (
-              <div className="w-full aspect-square bg-gray-700 rounded-lg flex items-center justify-center mb-4">
-                <List size={48} className="text-gray-500" />
-              </div>
-            )}
+          <li key={playlist.id} className="card transition-all hover:bg-gray-700/50">
+            <CoverImage
+              images={playlist.images}
+              alt={`Cover for ${playlist.name}`}
+              size={300}
+              className="mb-4 aspect-square w-full rounded-lg"
+              fallbackIcon={List}
+            />
 
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <h4 className="font-semibold flex-1 line-clamp-2">{playlist.name}</h4>
-              <a
-                href={playlist.external_urls.spotify}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-spotify-green transition-colors flex-shrink-0"
-              >
-                <ExternalLink size={18} />
-              </a>
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <h4 className="line-clamp-2 flex-1 font-semibold">{playlist.name}</h4>
+              <SpotifyLink href={playlist.external_urls.spotify} label={playlist.name} />
             </div>
 
             {playlist.description && (
-              <p className="text-sm text-gray-400 line-clamp-2 mb-3">
-                {playlist.description}
+              <p className="mb-3 line-clamp-2 text-sm text-gray-400">
+                {decodeHtmlEntities(playlist.description)}
               </p>
             )}
 
             <div className="flex items-center gap-4 text-sm text-gray-400">
-              <span>{playlist.tracks.total} tracks</span>
+              <span>{trackCount(playlist).toLocaleString()} tracks</span>
               {!playlist.public && (
                 <span className="flex items-center gap-1">
-                  <Lock size={14} />
+                  <Lock size={14} aria-hidden="true" />
                   Private
                 </span>
               )}
               {playlist.collaborative && (
                 <span className="flex items-center gap-1">
-                  <Users size={14} />
+                  <Users size={14} aria-hidden="true" />
                   Collab
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-gray-500 mt-2">
-              By {playlist.owner.display_name}
-            </p>
-          </div>
+            {playlist.owner.display_name && (
+              <p className="mt-2 text-xs text-gray-500">By {playlist.owner.display_name}</p>
+            )}
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

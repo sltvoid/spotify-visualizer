@@ -1,112 +1,70 @@
-import { useState, useEffect } from 'react';
-import { ExternalLink, Music } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
-import type { SpotifyTrack, TimeRange } from '../types/spotify';
+import { Music } from 'lucide-react';
+import type { TimeRange } from '../types/spotify';
+import { useTopTracks } from '../hooks/useSpotify';
+import { formatDuration, joinArtistNames } from '../utils/formatters';
+import CoverImage from './CoverImage';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
+import SpotifyLink from './SpotifyLink';
 
-interface TopTracksProps {
-  timeRange: TimeRange;
-}
+export default function TopTracks({ timeRange }: { timeRange: TimeRange }) {
+  const { data: tracks, isPending, isError, error, refetch } = useTopTracks(timeRange);
 
-export default function TopTracks({ timeRange }: TopTracksProps) {
-  const [tracks, setTracks] = useState<SpotifyTrack[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchTracks = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getTopTracks(timeRange, 50);
-        setTracks(data);
-      } catch (err) {
-        setError('Failed to load top tracks');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTracks();
-  }, [timeRange]);
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (tracks.length === 0) return <EmptyState>No top tracks yet</EmptyState>;
 
   return (
-    <div className="space-y-4">
+    <ol className="space-y-4" aria-label="Top tracks">
       {tracks.map((track, index) => (
-        <div
-          key={track.id}
-          className="card hover:bg-gray-700/50 transition-all duration-200"
-        >
+        <li key={track.id} className="card transition-all duration-200 hover:bg-gray-700/50">
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-gray-500 w-8 text-center">
+            <span className="w-8 text-center text-2xl font-bold text-gray-500" aria-hidden="true">
               {index + 1}
             </span>
 
-            {track.album.images[0] ? (
-              <img
-                src={track.album.images[0].url}
-                alt={track.album.name}
-                className="w-16 h-16 rounded object-cover"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded bg-gray-700 flex items-center justify-center">
-                <Music className="text-gray-500" />
-              </div>
-            )}
+            <CoverImage
+              images={track.album.images}
+              alt={`Album cover for ${track.album.name}`}
+              size={64}
+              className="h-16 w-16 rounded"
+              fallbackIcon={Music}
+            />
 
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold truncate">{track.name}</h4>
-              <p className="text-sm text-gray-400 truncate">
-                {track.artists.map((a) => a.name).join(', ')}
-              </p>
-              <p className="text-xs text-gray-500 truncate mt-1">
-                {track.album.name}
-              </p>
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate font-semibold">{track.name}</h4>
+              <p className="truncate text-sm text-gray-400">{joinArtistNames(track.artists)}</p>
+              <p className="mt-1 truncate text-xs text-gray-500">{track.album.name}</p>
             </div>
 
-            <div className="hidden md:flex items-center gap-6">
-              <div className="text-center">
-                <div className="text-xs text-gray-500">Popularity</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-20 bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-spotify-green h-2 rounded-full"
-                      style={{ width: `${track.popularity}%` }}
-                    />
+            <div className="hidden items-center gap-6 md:flex">
+              {/* Not returned to Development Mode apps since February 2026. */}
+              {track.popularity !== undefined && (
+                <div className="text-center">
+                  <div className="text-xs text-gray-500">Popularity</div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-20 rounded-full bg-gray-700" aria-hidden="true">
+                      <div
+                        className="h-2 rounded-full bg-spotify-green"
+                        style={{ width: `${track.popularity}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium">{track.popularity}</span>
                   </div>
-                  <span className="text-sm font-medium">{track.popularity}</span>
                 </div>
-              </div>
+              )}
 
               <div className="text-center">
                 <div className="text-xs text-gray-500">Duration</div>
-                <div className="text-sm font-medium">
-                  {formatDuration(track.duration_ms)}
-                </div>
+                <div className="text-sm font-medium">{formatDuration(track.duration_ms)}</div>
               </div>
             </div>
 
-            <a
-              href={track.external_urls.spotify}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-spotify-green transition-colors"
-            >
-              <ExternalLink size={20} />
-            </a>
+            <SpotifyLink href={track.external_urls.spotify} label={track.name} size={20} />
           </div>
-        </div>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }

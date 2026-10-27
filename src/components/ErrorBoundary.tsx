@@ -1,4 +1,4 @@
-import { Component, type ReactNode, type ReactElement } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -7,106 +7,58 @@ interface Props {
 }
 
 interface State {
-  hasError: boolean;
   error: Error | null;
 }
 
 /**
- * Error Boundary component that catches JavaScript errors anywhere in the
- * child component tree, logs those errors, and displays a fallback UI.
+ * Catches render errors in its subtree and shows a recovery UI instead of a
+ * blank page.
  */
 export default class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error('ErrorBoundary caught an error:', error, errorInfo.componentStack);
   }
 
-  handleReset = (): void => {
-    this.setState({ hasError: false, error: null });
-  };
-
-  handleReload = (): void => {
-    window.location.reload();
+  private handleReset = (): void => {
+    this.setState({ error: null });
   };
 
   render(): ReactNode {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+    const { error } = this.state;
+    if (!error) return this.props.children;
+    if (this.props.fallback) return this.props.fallback;
 
-      return (
-        <div className="min-h-[400px] flex items-center justify-center p-8">
-          <div className="card max-w-md text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8 text-red-400" />
-              </div>
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
-            <p className="text-gray-400 mb-6">
-              {this.state.error?.message || 'An unexpected error occurred while loading this section.'}
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={this.handleReset}
-                className="btn-secondary flex items-center gap-2"
-                aria-label="Try again"
-              >
-                <RefreshCw size={16} />
-                Try Again
-              </button>
-              <button
-                onClick={this.handleReload}
-                className="btn-primary"
-                aria-label="Reload page"
-              >
-                Reload Page
-              </button>
-            </div>
+    return (
+      <div className="flex min-h-[400px] items-center justify-center p-8" role="alert">
+        <div className="card max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
+            <AlertTriangle className="h-8 w-8 text-red-400" aria-hidden="true" />
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-white">Something went wrong</h2>
+          <p className="mb-6 text-gray-400">
+            {error.message || 'An unexpected error occurred while loading this section.'}
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={this.handleReset}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              Try Again
+            </button>
+            <button type="button" onClick={() => window.location.reload()} className="btn-primary">
+              Reload Page
+            </button>
           </div>
         </div>
-      );
-    }
-
-    return this.props.children;
+      </div>
+    );
   }
-}
-
-/**
- * Lightweight error display component for inline errors within sections.
- */
-interface ErrorMessageProps {
-  message: string;
-  onRetry?: () => void;
-}
-
-export function ErrorMessage({ message, onRetry }: ErrorMessageProps): ReactElement {
-  return (
-    <div
-      className="text-center p-6 rounded-xl bg-red-500/10 border border-red-500/20"
-      role="alert"
-      aria-live="polite"
-    >
-      <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-      <p className="text-red-400 mb-3">{message}</p>
-      {onRetry && (
-        <button
-          onClick={onRetry}
-          className="btn-secondary text-sm"
-          aria-label="Retry loading data"
-        >
-          Try Again
-        </button>
-      )}
-    </div>
-  );
 }

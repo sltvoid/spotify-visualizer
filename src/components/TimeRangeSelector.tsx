@@ -1,37 +1,35 @@
 import type { TimeRange } from '../types/spotify';
+import { TIME_RANGES } from '../constants';
 
 interface TimeRangeSelectorProps {
   selected: TimeRange;
   onChange: (range: TimeRange) => void;
 }
 
-const TIME_RANGES: { value: TimeRange; label: string; description: string }[] = [
-  { value: 'short_term', label: 'Last 4 Weeks', description: 'Recent trends' },
-  { value: 'medium_term', label: 'Last 6 Months', description: 'Current favorites' },
-  { value: 'long_term', label: 'All Time', description: 'Your classics' },
-];
-
 export default function TimeRangeSelector({ selected, onChange }: TimeRangeSelectorProps) {
   return (
-    <div className="flex gap-3 flex-wrap">
-      {TIME_RANGES.map(({ value, label, description }) => (
-        <button
-          key={value}
-          onClick={() => onChange(value)}
-          className={`px-5 py-3 rounded-xl font-medium transition-all duration-300 ${
-            selected === value
-              ? 'bg-gradient-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong border border-white/20'
-              : 'bg-white/5 text-gray-300 hover:bg-white/10 backdrop-blur-sm border border-white/10 hover:border-white/20 hover:shadow-glass'
-          }`}
-        >
-          <div className="text-left">
-            <div className="font-semibold">{label}</div>
-            <div className={`text-xs ${selected === value ? 'text-green-100' : 'text-gray-400'}`}>
+    <div className="flex flex-wrap gap-3" role="group" aria-labelledby="time-period-label">
+      {TIME_RANGES.map(({ value, label, description }) => {
+        const isSelected = selected === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onChange(value)}
+            aria-pressed={isSelected}
+            className={`rounded-xl px-5 py-3 text-left font-medium transition-all duration-300 ${
+              isSelected
+                ? 'border border-white/20 bg-linear-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong'
+                : 'border border-white/10 bg-white/5 text-gray-300 backdrop-blur-sm hover:border-white/20 hover:bg-white/10 hover:shadow-glass'
+            }`}
+          >
+            <span className="block font-semibold">{label}</span>
+            <span className={`block text-xs ${isSelected ? 'text-green-100' : 'text-gray-400'}`}>
               {description}
-            </div>
-          </div>
-        </button>
-      ))}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

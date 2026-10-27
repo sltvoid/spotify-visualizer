@@ -1,191 +1,107 @@
 # Spotify Stats Visualizer
 
-A comprehensive Spotify statistics visualizer - a clone of stats.fm and must.fm. Visualize your listening habits with beautiful charts and analytics!
+A personal Spotify statistics dashboard in the spirit of stats.fm. Log in with Spotify and explore your top artists, tracks, albums, genres, and listening history.
+
+Everything runs in your browser: there is no backend, and your data is never stored or shared.
 
 ## Features
 
-### 📊 Comprehensive Analytics
-- **Top Artists** - View your most listened artists with popularity charts
-- **Top Tracks** - See your favorite songs with detailed statistics
-- **Recently Played** - Track your listening history in real-time
-- **Audio Features** - Analyze your music taste with radar charts showing:
-  - Danceability
-  - Energy
-  - Valence (Happiness)
-  - Acousticness
-  - Instrumentalness
-  - Liveness
-  - Speechiness
+- **Overview**: headline stats plus your top artists and genres
+- **Insights**: genre diversity, artist loyalty, decade breakdown, and more
+- **Top Artists / Tracks / Albums** for the last 4 weeks, 6 months, or all time
+- **Genres**: distribution chart across your top artists
+- **Library**: saved-track stats with CSV export
+- **Playlists** and **Recently Played**
+- **Audio Features**: only for apps with extended API access (see [Spotify API limits](#spotify-api-limits))
 
-### 🎨 Beautiful Visualizations
-- **Bar Charts** - Artist and track popularity
-- **Radar Charts** - Audio features analysis
-- **Pie Charts** - Genre distribution
-- **Progress Bars** - Visual popularity indicators
+The selected tab and time range are kept in the URL, so refreshing or sharing a link keeps your place.
 
-### ⏱️ Multiple Time Ranges
-- **Last 4 Weeks** - Short term listening habits
-- **Last 6 Months** - Medium term trends
-- **All Time** - Your complete listening history
+## Tech stack
 
-### 🎯 User Experience
-- Responsive design for all devices
-- Modern gradient UI with Spotify branding
-- Real-time loading states
-- Error handling
-- Direct links to Spotify
+- [React 19](https://react.dev) + TypeScript
+- [Vite](https://vite.dev) for dev server and builds
+- [TanStack Query](https://tanstack.com/query) for data fetching and caching
+- [React Router](https://reactrouter.com)
+- [Tailwind CSS v4](https://tailwindcss.com) (theme tokens live in `src/index.css`)
+- [Recharts](https://recharts.org) for charts, [Lucide](https://lucide.dev) for icons
+- [Vitest](https://vitest.dev), ESLint, and Prettier
 
-## Tech Stack
+## Getting started
 
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Fast build tool
-- **Tailwind CSS** - Styling
-- **Recharts** - Data visualization
-- **Axios** - API requests
-- **React Router** - Navigation
-- **Lucide React** - Icons
-- **Spotify Web API** - Data source
+Requires Node.js 22.22 or newer (see `.nvmrc`).
 
-## Setup Instructions
+### 1. Create a Spotify app
 
-### Prerequisites
-- Node.js 18+ installed
-- A Spotify account
-- Spotify Developer credentials
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and click **Create app**.
+2. Add this redirect URI: `http://127.0.0.1:5173/callback`
+   Spotify no longer accepts `localhost` redirect URIs, so use the loopback IP.
+3. Select **Web API**, save, and copy the **Client ID**.
+4. While the app is in Development Mode, add your Spotify account under **User Management**.
 
-### 1. Create Spotify App
-
-1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Click "Create App"
-3. Fill in the details:
-   - App name: "Spotify Stats Visualizer" (or your choice)
-   - App description: "Personal Spotify statistics visualizer"
-   - Redirect URI: `http://localhost:5173/callback`
-4. Save and copy your **Client ID**
-
-### 2. Install Dependencies
+### 2. Configure and run
 
 ```bash
 npm install
-```
-
-### 3. Configure Environment Variables
-
-1. Copy the example environment file:
-```bash
-cp .env.example .env
-```
-
-2. Edit `.env` and add your Spotify Client ID:
-```env
-VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id_here
-VITE_SPOTIFY_REDIRECT_URI=http://localhost:5173/callback
-```
-
-### 4. Run the Application
-
-```bash
+cp .env.example .env    # then set VITE_SPOTIFY_CLIENT_ID
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+Open **http://127.0.0.1:5173** (not `localhost`; the address must match the redirect URI).
 
-### 5. Login with Spotify
+## Scripts
 
-1. Click "Login with Spotify" on the home page
-2. Authorize the application
-3. You'll be redirected to the dashboard with all your stats!
+| Command           | What it does                                          |
+| ----------------- | ----------------------------------------------------- |
+| `npm run dev`     | Start the dev server on http://127.0.0.1:5173         |
+| `npm run build`   | Type-check and build for production into `dist/`      |
+| `npm run preview` | Serve the production build locally                    |
+| `npm test`        | Run unit tests once (`npm run test:watch` to watch)   |
+| `npm run lint`    | Run ESLint                                            |
+| `npm run format`  | Format everything with Prettier                       |
+| `npm run check`   | Typecheck, lint, format check, and tests (same as CI) |
 
-## Project Structure
+## Spotify API limits
+
+Spotify has restricted its Web API several times. This app degrades gracefully instead of breaking:
+
+- **Audio features** (Audio Features tab, Advanced Audio tab, mood and energy insights): unavailable to apps created after November 27, 2024 unless they have extended access. Those sections show an explanation instead.
+- **February 2026 Development Mode changes**: popularity scores and profile details (email, country, followers, plan) are no longer returned. Popularity charts and those profile fields are hidden when missing. Development Mode apps also require the owner to have Spotify Premium and allow up to 5 users.
+
+See Spotify's [February 2026 migration guide](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide) for details.
+
+## Project structure
 
 ```
 src/
-├── components/        # React components
-│   ├── AudioFeatures.tsx       # Radar chart for audio analysis
-│   ├── GenreDistribution.tsx   # Pie chart for genres
-│   ├── ListeningStats.tsx      # Overview statistics
-│   ├── LoadingSpinner.tsx      # Loading state component
-│   ├── RecentlyPlayed.tsx      # Recent tracks list
-│   ├── TimeRangeSelector.tsx   # Time period selector
-│   ├── TopArtists.tsx          # Top artists with charts
-│   ├── TopTracks.tsx           # Top tracks list
-│   └── UserProfile.tsx         # User info and logout
-├── pages/            # Page components
-│   ├── Callback.tsx           # OAuth callback handler
-│   ├── Dashboard.tsx          # Main dashboard
-│   └── Login.tsx              # Login page
-├── services/         # API services
-│   └── spotify.ts             # Spotify API client
-├── types/            # TypeScript types
-│   └── spotify.ts             # Spotify data types
-├── utils/            # Utilities
-│   └── auth.ts                # Authentication helpers
-├── App.tsx           # Main app with routing
-├── main.tsx          # Entry point
-└── index.css         # Global styles
+├── components/      # Dashboard sections and shared UI (CoverImage, StatCard, ...)
+├── constants/       # API settings, tabs, time ranges, chart colors
+├── hooks/           # TanStack Query hooks, one per Spotify resource
+├── lib/             # Query client setup (retries, 401 handling)
+├── pages/           # Login, OAuth callback, Dashboard
+├── services/        # Typed Spotify Web API client (fetch-based)
+├── types/           # Spotify response types
+├── utils/           # Auth (PKCE), stats calculations, formatters
+├── App.tsx          # Routes
+├── main.tsx         # Entry point and providers
+└── index.css        # Tailwind theme and glass design system
 ```
 
-## Available Scripts
+## How authentication works
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+The app uses Spotify's [Authorization Code with PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow) flow, which needs no client secret:
 
-## Features Comparison
-
-### Stats.fm / Must.fm Features Implemented
-
-✅ Top Artists with charts
-✅ Top Tracks with popularity
-✅ Recently Played timeline
-✅ Audio Features analysis
-✅ Genre Distribution
-✅ Multiple time ranges
-✅ User profile display
-✅ Responsive design
-✅ Direct Spotify links
-
-## API Scopes Used
-
-The app requests the following Spotify scopes:
-- `user-read-private` - Access to user profile data
-- `user-read-email` - Access to user email
-- `user-top-read` - Access to top artists and tracks
-- `user-read-recently-played` - Access to listening history
-- `user-library-read` - Access to saved content
-- `playlist-read-private` - Access to private playlists
-
-## Privacy
-
-- All data is fetched directly from Spotify's API
-- No data is stored on any server
-- Authentication tokens are stored locally in your browser
-- Data is never shared with third parties
+- The PKCE verifier and CSRF `state` live in `sessionStorage` only for the login round trip.
+- Access and refresh tokens are stored in `localStorage`. Tokens are refreshed automatically before they expire, and concurrent requests share one refresh.
+- Requested scopes are read-only: profile, top items, recently played, library, and playlists.
 
 ## Deployment
 
-### For Production Deployment:
+The repo includes a `vercel.json` with SPA rewrites and security headers (including a Content Security Policy). For any host:
 
-1. Update the redirect URI in your Spotify Developer Dashboard to your production URL
-2. Update `.env` with production values:
-```env
-VITE_SPOTIFY_CLIENT_ID=your_spotify_client_id
-VITE_SPOTIFY_REDIRECT_URI=https://yourdomain.com/callback
-```
-3. Build the project:
-```bash
-npm run build
-```
-4. Deploy the `dist` folder to your hosting service (Vercel, Netlify, etc.)
+1. Add `https://your-domain.com/callback` as a redirect URI in the Spotify dashboard.
+2. Set `VITE_SPOTIFY_CLIENT_ID` in the host's environment. `VITE_SPOTIFY_REDIRECT_URI` is optional and defaults to `<origin>/callback`.
+3. Build with `npm run build` and serve `dist/`, rewriting unknown paths to `index.html`.
 
 ## License
 
-MIT License - feel free to use this project for personal or commercial purposes.
-
-## Credits
-
-Built with ❤️ using Spotify Web API
-
-Inspired by stats.fm and must.fm
+MIT

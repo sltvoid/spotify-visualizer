@@ -1,205 +1,164 @@
-import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { spotifyService } from '../services/spotify';
-import type { TimeRange, AudioFeatures } from '../types/spotify';
+import { useMemo } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import type { AudioFeatures, TimeRange } from '../types/spotify';
+import { useAudioFeatures } from '../hooks/useSpotify';
+import { average, rankBy } from '../utils/stats';
+import {
+  CHART_AXIS_STROKE,
+  CHART_COLORS,
+  CHART_GRID_STROKE,
+  CHART_HEIGHT,
+  CHART_TOOLTIP_STYLE,
+  GREEN_PALETTE,
+  PIE_CHART_OUTER_RADIUS,
+} from '../constants';
+import ChartCard from './ChartCard';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
-
-interface AdvancedAudioAnalysisProps {
-  timeRange: TimeRange;
-}
+import StatCard from './StatCard';
 
 const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const COLORS = ['#1DB954', '#1ED760', '#2EBD59', '#1AA34A', '#158940', '#117A37', '#0D6B2E', '#095C25', '#05481C', '#023913', '#1DB954', '#1ED760'];
 
-export default function AdvancedAudioAnalysis({ timeRange }: AdvancedAudioAnalysisProps) {
-  const [features, setFeatures] = useState<AudioFeatures[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const TEMPO_RANGES = [
+  { name: '< 80 BPM (Slow)', min: 0, max: 80 },
+  { name: '80-100 BPM', min: 80, max: 100 },
+  { name: '100-120 BPM', min: 100, max: 120 },
+  { name: '120-140 BPM', min: 120, max: 140 },
+  { name: '140-160 BPM', min: 140, max: 160 },
+  { name: '> 160 BPM (Fast)', min: 160, max: Infinity },
+];
 
-  useEffect(() => {
-    const fetchFeatures = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const tracks = await spotifyService.getTopTracks(timeRange, 50);
-        const trackIds = tracks.map((t) => t.id);
-        const audioFeatures = await spotifyService.getAudioFeatures(trackIds);
-        setFeatures(audioFeatures);
-      } catch (err: any) {
-        if (err?.response?.status === 403) {
-          setError('Audio analysis unavailable. This may be due to Spotify Development Mode restrictions. Try with fewer tracks or contact Spotify to enable Extended Quota Mode.');
-        } else {
-          setError('Failed to load audio analysis');
-        }
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+function analyze(features: AudioFeatures[]) {
+  const major = features.filter((f) => f.mode === 1).length;
+  const minor = features.filter((f) => f.mode === 0).length;
+  const keys = rankBy(features, (f) => KEY_NAMES[f.key] ?? null);
 
-    fetchFeatures();
-  }, [timeRange]);
+  return {
+    keys,
+    modes: [
+      { name: 'Major', value: major },
+      { name: 'Minor', value: minor },
+    ],
+    preferredMode: major >= minor ? 'Major' : 'Minor',
+    tempos: TEMPO_RANGES.map(({ name, min, max }) => ({
+      name,
+      count: features.filter((f) => f.tempo >= min && f.tempo < max).length,
+    })),
+    timeSignatures: rankBy(features, (f) => `${f.time_signature}/4`),
+    avgTempo: average(features.map((f) => f.tempo)) ?? 0,
+    avgLoudness: average(features.map((f) => f.loudness)) ?? 0,
+  };
+}
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
-  if (features.length === 0) return <div className="text-gray-400 text-center p-4">No data available</div>;
+export default function AdvancedAudioAnalysis({ timeRange }: { timeRange: TimeRange }) {
+  const { data: features, isPending, isError, error, refetch } = useAudioFeatures(timeRange);
+  const stats = useMemo(() => (features?.length ? analyze(features) : null), [features]);
 
-  // Key distribution
-  const keyCount = new Map<number, number>();
-  features.forEach((f) => {
-    keyCount.set(f.key, (keyCount.get(f.key) || 0) + 1);
-  });
-  const keyData = Array.from(keyCount.entries())
-    .map(([key, count]) => ({ name: KEY_NAMES[key] || 'Unknown', value: count }))
-    .sort((a, b) => b.value - a.value);
-
-  // Mode distribution (Major vs Minor)
-  const majorCount = features.filter((f) => f.mode === 1).length;
-  const minorCount = features.filter((f) => f.mode === 0).length;
-  const modeData = [
-    { name: 'Major', value: majorCount },
-    { name: 'Minor', value: minorCount },
-  ];
-
-  // Tempo ranges
-  const tempoRanges = [
-    { name: '< 80 BPM (Slow)', min: 0, max: 80 },
-    { name: '80-100 BPM', min: 80, max: 100 },
-    { name: '100-120 BPM', min: 100, max: 120 },
-    { name: '120-140 BPM', min: 120, max: 140 },
-    { name: '140-160 BPM', min: 140, max: 160 },
-    { name: '> 160 BPM (Fast)', min: 160, max: 300 },
-  ];
-  const tempoData = tempoRanges.map((range) => ({
-    name: range.name,
-    count: features.filter((f) => f.tempo >= range.min && f.tempo < range.max).length,
-  }));
-
-  // Time signature distribution
-  const timeSigCount = new Map<number, number>();
-  features.forEach((f) => {
-    timeSigCount.set(f.time_signature, (timeSigCount.get(f.time_signature) || 0) + 1);
-  });
-  const timeSigData = Array.from(timeSigCount.entries())
-    .map(([sig, count]) => ({ name: `${sig}/4`, value: count }))
-    .sort((a, b) => b.value - a.value);
-
-  // Average stats
-  const avgTempo = features.reduce((sum, f) => sum + f.tempo, 0) / features.length;
-  const avgLoudness = features.reduce((sum, f) => sum + f.loudness, 0) / features.length;
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (!stats) return <EmptyState>No audio analysis data available</EmptyState>;
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card">
-          <p className="text-gray-400 text-sm">Average Tempo</p>
-          <p className="text-3xl font-bold text-spotify-green">{avgTempo.toFixed(1)} BPM</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Average Loudness</p>
-          <p className="text-3xl font-bold">{avgLoudness.toFixed(1)} dB</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Most Common Key</p>
-          <p className="text-3xl font-bold">{keyData[0]?.name || 'N/A'}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Mode Preference</p>
-          <p className="text-3xl font-bold">{majorCount > minorCount ? 'Major' : 'Minor'}</p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard label="Average Tempo" value={`${stats.avgTempo.toFixed(1)} BPM`} highlight />
+        <StatCard label="Average Loudness" value={`${stats.avgLoudness.toFixed(1)} dB`} />
+        <StatCard label="Most Common Key" value={stats.keys[0]?.name ?? 'N/A'} />
+        <StatCard label="Mode Preference" value={stats.preferredMode} />
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Key Distribution */}
-        <div className="card">
-          <h3 className="text-xl font-bold mb-4">Musical Key Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={keyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="name" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                }}
-              />
-              <Bar dataKey="value" fill="#1DB954" radius={[8, 8, 0, 0]} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <ChartCard title="Musical Key Distribution">
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+            <BarChart data={stats.keys}>
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+              <XAxis dataKey="name" stroke={CHART_AXIS_STROKE} />
+              <YAxis stroke={CHART_AXIS_STROKE} allowDecimals={false} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Bar dataKey="value" fill={CHART_COLORS.SPOTIFY_GREEN} radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
 
-        {/* Mode Distribution */}
-        <div className="card">
-          <h3 className="text-xl font-bold mb-4">Major vs Minor Keys</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <ChartCard title="Major vs Minor Keys">
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <PieChart>
               <Pie
-                data={modeData}
+                data={stats.modes}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 label={false}
-                outerRadius={100}
-                fill="#8884d8"
+                outerRadius={PIE_CHART_OUTER_RADIUS}
                 dataKey="value"
               >
-                {modeData.map((_entry, index) => (
-                  <Cell key={`cell-${index}`} fill={index === 0 ? '#1DB954' : '#1AA34A'} />
+                {stats.modes.map((mode, index) => (
+                  <Cell
+                    key={mode.name}
+                    fill={
+                      index === 0 ? CHART_COLORS.SPOTIFY_GREEN : CHART_COLORS.SPOTIFY_GREEN_DARK
+                    }
+                  />
                 ))}
               </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Tempo Distribution */}
-        <div className="card">
-          <h3 className="text-xl font-bold mb-4">Tempo Distribution</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={tempoData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="name" stroke="#9CA3AF" angle={-15} textAnchor="end" height={80} />
-              <YAxis stroke="#9CA3AF" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                }}
-              />
-              <Bar dataKey="count" fill="#1DB954" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Time Signature */}
-        <div className="card">
-          <h3 className="text-xl font-bold mb-4">Time Signature</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={timeSigData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={false}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {timeSigData.map((_entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
+
+        <ChartCard title="Tempo Distribution">
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+            <BarChart data={stats.tempos}>
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+              <XAxis
+                dataKey="name"
+                stroke={CHART_AXIS_STROKE}
+                angle={-15}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis stroke={CHART_AXIS_STROKE} allowDecimals={false} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Bar dataKey="count" fill={CHART_COLORS.SPOTIFY_GREEN} radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Time Signature">
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+            <PieChart>
+              <Pie
+                data={stats.timeSignatures}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={false}
+                outerRadius={PIE_CHART_OUTER_RADIUS}
+                dataKey="value"
+              >
+                {stats.timeSignatures.map((sig, index) => (
+                  <Cell key={sig.name} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
       </div>
     </div>
   );

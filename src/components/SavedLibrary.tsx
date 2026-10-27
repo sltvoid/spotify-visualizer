@@ -1,152 +1,127 @@
-import { useState } from 'react';
-import { Music, Download } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
-import type { SavedTrack } from '../types/spotify';
-import { useDataFetch } from '../hooks';
-import { formatDuration, formatDate, createCSV, downloadFile } from '../utils/formatters';
+import { useMemo, useState } from 'react';
+import { Download, LoaderCircle, Music } from 'lucide-react';
+import { useSavedTracks } from '../hooks/useSpotify';
+import {
+  createCSV,
+  downloadFile,
+  formatDate,
+  formatDuration,
+  formatHoursMinutes,
+  joinArtistNames,
+} from '../utils/formatters';
 import { LOAD_LIMIT_OPTIONS } from '../constants';
+import CoverImage from './CoverImage';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
-import { ErrorMessage } from './ErrorBoundary';
-
-type LoadLimitValue = number | undefined;
+import StatCard from './StatCard';
 
 export default function SavedLibrary() {
-  const [loadLimit, setLoadLimit] = useState<LoadLimitValue>(100);
+  const [loadLimit, setLoadLimit] = useState<number | undefined>(100);
+  const {
+    data: tracks,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isPlaceholderData,
+  } = useSavedTracks(loadLimit);
 
-  const { data: tracks, loading, error, refetch } = useDataFetch<SavedTrack[]>(
-    () => spotifyService.getSavedTracks(loadLimit),
-    [loadLimit]
-  );
+  const summary = useMemo(() => {
+    if (!tracks) return null;
+    return {
+      totalDuration: tracks.reduce((sum, { track }) => sum + track.duration_ms, 0),
+      uniqueArtists: new Set(tracks.flatMap(({ track }) => track.artists.map((a) => a.id))).size,
+      uniqueAlbums: new Set(tracks.map(({ track }) => track.album.id)).size,
+    };
+  }, [tracks]);
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} onRetry={refetch} />;
-  if (!tracks || tracks.length === 0) {
-    return <div className="text-gray-400 text-center p-4">No saved tracks found</div>;
-  }
-
-  const totalDuration = tracks.reduce((sum, { track }) => sum + track.duration_ms, 0);
-  const hours = Math.floor(totalDuration / 3600000);
-  const minutes = Math.floor((totalDuration % 3600000) / 60000);
-  const uniqueArtists = new Set(tracks.flatMap(({ track }) => track.artists.map((a) => a.id)));
-  const uniqueAlbums = new Set(tracks.map(({ track }) => track.album.id));
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (tracks.length === 0 || !summary) return <EmptyState>No saved tracks found</EmptyState>;
 
   const handleExportCSV = () => {
     const headers = ['Track', 'Artist', 'Album', 'Duration', 'Added Date'];
     const rows = tracks.map(({ track, added_at }) => [
       track.name,
-      track.artists.map((a) => a.name).join(', '),
+      joinArtistNames(track.artists),
       track.album.name,
       formatDuration(track.duration_ms),
       formatDate(added_at),
     ]);
-
-    const csv = createCSV(headers, rows);
-    downloadFile(csv, 'spotify-library.csv', 'text/csv');
-  };
-
-  const handleLimitChange = (value: LoadLimitValue) => {
-    setLoadLimit(value);
+    downloadFile(createCSV(headers, rows), 'spotify-library.csv', 'text/csv');
   };
 
   return (
     <div className="space-y-6">
-      {/* Stats Overview */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-4 gap-4"
-        role="region"
-        aria-label="Library statistics"
-      >
-        <div className="card">
-          <p className="text-gray-400 text-sm">Total Tracks</p>
-          <p className="text-3xl font-bold text-spotify-green">{tracks.length.toLocaleString()}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Total Duration</p>
-          <p className="text-3xl font-bold">
-            {hours}h {minutes}m
-          </p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Unique Artists</p>
-          <p className="text-3xl font-bold">{uniqueArtists.size.toLocaleString()}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Unique Albums</p>
-          <p className="text-3xl font-bold">{uniqueAlbums.size.toLocaleString()}</p>
-        </div>
-      </div>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4" aria-label="Library statistics">
+        <StatCard label="Total Tracks" value={tracks.length.toLocaleString()} highlight />
+        <StatCard label="Total Duration" value={formatHoursMinutes(summary.totalDuration)} />
+        <StatCard label="Unique Artists" value={summary.uniqueArtists.toLocaleString()} />
+        <StatCard label="Unique Albums" value={summary.uniqueAlbums.toLocaleString()} />
+      </section>
 
-      {/* Actions */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Track limit selection">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Tracks to load">
           {LOAD_LIMIT_OPTIONS.map((option) => (
             <button
               key={option.label}
-              onClick={() => handleLimitChange(option.value)}
+              type="button"
+              onClick={() => setLoadLimit(option.value)}
               className={`btn-secondary ${loadLimit === option.value ? 'bg-spotify-green' : ''}`}
               aria-pressed={loadLimit === option.value}
             >
               {option.label}
             </button>
           ))}
+          {isPlaceholderData && (
+            <span className="flex items-center gap-2 text-sm text-gray-400" role="status">
+              <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+              Loading more...
+            </span>
+          )}
         </div>
         <button
+          type="button"
           onClick={handleExportCSV}
           className="btn-secondary flex items-center gap-2"
-          aria-label="Export library to CSV file"
+          disabled={isPlaceholderData}
         >
           <Download size={16} aria-hidden="true" />
           Export CSV
         </button>
       </div>
 
-      {/* Track List */}
-      <div className="space-y-2" role="list" aria-label="Saved tracks">
+      <ul className="space-y-2" aria-label="Saved tracks">
         {tracks.map(({ track, added_at }, index) => (
-          <div
-            key={`${track.id}-${index}`}
-            className="card hover:bg-gray-700/50 transition-all"
-            role="listitem"
-          >
+          <li key={`${track.id}-${index}`} className="card transition-all hover:bg-gray-700/50">
             <div className="flex items-center gap-4">
-              {track.album.images[2] ? (
-                <img
-                  src={track.album.images[2].url}
-                  alt={`Album cover for ${track.album.name}`}
-                  className="w-12 h-12 rounded"
-                  loading="lazy"
-                />
-              ) : (
-                <div
-                  className="w-12 h-12 rounded bg-gray-700 flex items-center justify-center"
-                  aria-label="No album cover available"
-                >
-                  <Music size={20} className="text-gray-500" aria-hidden="true" />
-                </div>
-              )}
+              <CoverImage
+                images={track.album.images}
+                alt={`Album cover for ${track.album.name}`}
+                size={48}
+                className="h-12 w-12 rounded"
+                fallbackIcon={Music}
+              />
 
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium truncate">{track.name}</h4>
-                <p className="text-sm text-gray-400 truncate">
-                  {track.artists.map((a) => a.name).join(', ')}
-                </p>
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate font-medium">{track.name}</h4>
+                <p className="truncate text-sm text-gray-400">{joinArtistNames(track.artists)}</p>
               </div>
 
-              <div className="hidden md:block text-sm text-gray-400 truncate max-w-xs">
+              <div className="hidden max-w-xs truncate text-sm text-gray-400 md:block">
                 {track.album.name}
               </div>
 
-              <div className="text-sm text-gray-500" aria-label={`Duration: ${formatDuration(track.duration_ms)}`}>
-                {formatDuration(track.duration_ms)}
-              </div>
+              <div className="text-sm text-gray-500">{formatDuration(track.duration_ms)}</div>
 
-              <div className="text-xs text-gray-500 hidden lg:block">
+              <div className="hidden text-xs text-gray-500 lg:block">
                 <time dateTime={added_at}>{formatDate(added_at)}</time>
               </div>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
