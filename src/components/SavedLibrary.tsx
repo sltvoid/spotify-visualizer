@@ -1,169 +1,127 @@
-import { useState, useEffect } from 'react';
-import { Music, Download } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
-import type { SavedTrack } from '../types/spotify';
+import { useMemo, useState } from 'react';
+import { Download, LoaderCircle, Music } from 'lucide-react';
+import { useSavedTracks } from '../hooks/useSpotify';
+import {
+  createCSV,
+  downloadFile,
+  formatDate,
+  formatDuration,
+  formatHoursMinutes,
+  joinArtistNames,
+} from '../utils/formatters';
+import { LOAD_LIMIT_OPTIONS } from '../constants';
+import CoverImage from './CoverImage';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
+import StatCard from './StatCard';
 
 export default function SavedLibrary() {
-  const [tracks, setTracks] = useState<SavedTrack[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [loadLimit, setLoadLimit] = useState(100);
+  const [loadLimit, setLoadLimit] = useState<number | undefined>(100);
+  const {
+    data: tracks,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isPlaceholderData,
+  } = useSavedTracks(loadLimit);
 
-  useEffect(() => {
-    const fetchLibrary = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getSavedTracks(loadLimit);
-        setTracks(data);
-      } catch (err) {
-        setError('Failed to load your library');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+  const summary = useMemo(() => {
+    if (!tracks) return null;
+    return {
+      totalDuration: tracks.reduce((sum, { track }) => sum + track.duration_ms, 0),
+      uniqueArtists: new Set(tracks.flatMap(({ track }) => track.artists.map((a) => a.id))).size,
+      uniqueAlbums: new Set(tracks.map(({ track }) => track.album.id)).size,
     };
+  }, [tracks]);
 
-    fetchLibrary();
-  }, [loadLimit]);
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (tracks.length === 0 || !summary) return <EmptyState>No saved tracks found</EmptyState>;
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
-
-  const totalDuration = tracks.reduce((sum, { track }) => sum + track.duration_ms, 0);
-  const hours = Math.floor(totalDuration / 3600000);
-  const minutes = Math.floor((totalDuration % 3600000) / 60000);
-
-  const formatDuration = (ms: number) => {
-    const mins = Math.floor(ms / 60000);
-    const secs = Math.floor((ms % 60000) / 1000);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const exportToCSV = () => {
-    const csv = [
-      ['Track', 'Artist', 'Album', 'Duration', 'Added Date'].join(','),
-      ...tracks.map(({ track, added_at }) =>
-        [
-          `"${track.name}"`,
-          `"${track.artists.map((a) => a.name).join(', ')}"`,
-          `"${track.album.name}"`,
-          formatDuration(track.duration_ms),
-          formatDate(added_at),
-        ].join(',')
-      ),
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'spotify-library.csv';
-    a.click();
+  const handleExportCSV = () => {
+    const headers = ['Track', 'Artist', 'Album', 'Duration', 'Added Date'];
+    const rows = tracks.map(({ track, added_at }) => [
+      track.name,
+      joinArtistNames(track.artists),
+      track.album.name,
+      formatDuration(track.duration_ms),
+      formatDate(added_at),
+    ]);
+    downloadFile(createCSV(headers, rows), 'spotify-library.csv', 'text/csv');
   };
 
   return (
     <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card">
-          <p className="text-gray-400 text-sm">Total Tracks</p>
-          <p className="text-3xl font-bold text-spotify-green">{tracks.length}</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Total Duration</p>
-          <p className="text-3xl font-bold">{hours}h {minutes}m</p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Unique Artists</p>
-          <p className="text-3xl font-bold">
-            {new Set(tracks.flatMap(({ track }) => track.artists.map((a) => a.id))).size}
-          </p>
-        </div>
-        <div className="card">
-          <p className="text-gray-400 text-sm">Unique Albums</p>
-          <p className="text-3xl font-bold">
-            {new Set(tracks.map(({ track }) => track.album.id)).size}
-          </p>
-        </div>
-      </div>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-4" aria-label="Library statistics">
+        <StatCard label="Total Tracks" value={tracks.length.toLocaleString()} highlight />
+        <StatCard label="Total Duration" value={formatHoursMinutes(summary.totalDuration)} />
+        <StatCard label="Unique Artists" value={summary.uniqueArtists.toLocaleString()} />
+        <StatCard label="Unique Albums" value={summary.uniqueAlbums.toLocaleString()} />
+      </section>
 
-      {/* Actions */}
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setLoadLimit(100)}
-            className={`btn-secondary ${loadLimit === 100 ? 'bg-spotify-green' : ''}`}
-          >
-            100 Tracks
-          </button>
-          <button
-            onClick={() => setLoadLimit(500)}
-            className={`btn-secondary ${loadLimit === 500 ? 'bg-spotify-green' : ''}`}
-          >
-            500 Tracks
-          </button>
-          <button
-            onClick={() => setLoadLimit(undefined as any)}
-            className={`btn-secondary ${loadLimit === undefined ? 'bg-spotify-green' : ''}`}
-          >
-            All Tracks
-          </button>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Tracks to load">
+          {LOAD_LIMIT_OPTIONS.map((option) => (
+            <button
+              key={option.label}
+              type="button"
+              onClick={() => setLoadLimit(option.value)}
+              className={`btn-secondary ${loadLimit === option.value ? 'bg-spotify-green' : ''}`}
+              aria-pressed={loadLimit === option.value}
+            >
+              {option.label}
+            </button>
+          ))}
+          {isPlaceholderData && (
+            <span className="flex items-center gap-2 text-sm text-gray-400" role="status">
+              <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
+              Loading more...
+            </span>
+          )}
         </div>
-        <button onClick={exportToCSV} className="btn-secondary flex items-center gap-2">
-          <Download size={16} />
+        <button
+          type="button"
+          onClick={handleExportCSV}
+          className="btn-secondary flex items-center gap-2"
+          disabled={isPlaceholderData}
+        >
+          <Download size={16} aria-hidden="true" />
           Export CSV
         </button>
       </div>
 
-      {/* Track List */}
-      <div className="space-y-2">
+      <ul className="space-y-2" aria-label="Saved tracks">
         {tracks.map(({ track, added_at }, index) => (
-          <div key={`${track.id}-${index}`} className="card hover:bg-gray-700/50 transition-all">
+          <li key={`${track.id}-${index}`} className="card transition-all hover:bg-gray-700/50">
             <div className="flex items-center gap-4">
-              {track.album.images[2] ? (
-                <img
-                  src={track.album.images[2].url}
-                  alt={track.album.name}
-                  className="w-12 h-12 rounded"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded bg-gray-700 flex items-center justify-center">
-                  <Music size={20} className="text-gray-500" />
-                </div>
-              )}
+              <CoverImage
+                images={track.album.images}
+                alt={`Album cover for ${track.album.name}`}
+                size={48}
+                className="h-12 w-12 rounded"
+                fallbackIcon={Music}
+              />
 
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium truncate">{track.name}</h4>
-                <p className="text-sm text-gray-400 truncate">
-                  {track.artists.map((a) => a.name).join(', ')}
-                </p>
+              <div className="min-w-0 flex-1">
+                <h4 className="truncate font-medium">{track.name}</h4>
+                <p className="truncate text-sm text-gray-400">{joinArtistNames(track.artists)}</p>
               </div>
 
-              <div className="hidden md:block text-sm text-gray-400 truncate max-w-xs">
+              <div className="hidden max-w-xs truncate text-sm text-gray-400 md:block">
                 {track.album.name}
               </div>
 
-              <div className="text-sm text-gray-500">
-                {formatDuration(track.duration_ms)}
-              </div>
+              <div className="text-sm text-gray-500">{formatDuration(track.duration_ms)}</div>
 
-              <div className="text-xs text-gray-500 hidden lg:block">
-                {formatDate(added_at)}
+              <div className="hidden text-xs text-gray-500 lg:block">
+                <time dateTime={added_at}>{formatDate(added_at)}</time>
               </div>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

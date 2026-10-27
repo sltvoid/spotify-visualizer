@@ -1,28 +1,36 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
+import { LoaderCircle } from 'lucide-react';
 import { handleCallback } from '../utils/auth';
-import { Loader2 } from 'lucide-react';
 
 export default function Callback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const processCallback = async () => {
-      const token = await handleCallback();
-      if (token) {
-        navigate('/dashboard');
-      } else {
-        navigate('/');
-      }
-    };
+    let cancelled = false;
 
-    processCallback();
+    handleCallback().then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate(`/?error=${encodeURIComponent(result.error)}`, { replace: true });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center" role="status">
       <div className="text-center">
-        <Loader2 className="animate-spin mx-auto mb-4 text-spotify-green" size={48} />
+        <LoaderCircle
+          className="mx-auto mb-4 animate-spin text-spotify-green"
+          size={48}
+          aria-hidden="true"
+        />
         <p className="text-xl">Logging you in...</p>
       </div>
     </div>

@@ -1,248 +1,162 @@
-import axios from 'axios';
 import type {
+  AudioFeatures,
+  CursorPaging,
+  Paging,
+  Playlist,
+  RecentlyPlayedTrack,
+  SavedTrack,
   SpotifyArtist,
   SpotifyTrack,
-  UserProfile,
   TimeRange,
-  TopItemsResponse,
-  RecentlyPlayedResponse,
-  AudioFeatures,
-  SavedTrack,
-  SavedAlbum,
-  Playlist,
-  PlaylistTrack,
-  Recommendations,
-  PaginatedResponse,
-  SpotifyAlbum,
+  UserProfile,
 } from '../types/spotify';
+import {
+  AUDIO_FEATURES_BATCH_SIZE,
+  PAGE_SIZE,
+  SPOTIFY_API_BASE,
+  TOP_ITEMS_LIMIT,
+} from '../constants';
+import { getValidAccessToken } from '../utils/auth';
 
-const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
+/** Error from the Spotify Web API, with the HTTP status when there is one. */
+export class SpotifyAPIError extends Error {
+  readonly status?: number;
+  readonly endpoint: string;
+  /** Seconds to wait before retrying (from the Retry-After header on 429s). */
+  readonly retryAfter?: number;
 
-class SpotifyService {
-  private getAuthHeader() {
-    const token = localStorage.getItem('spotify_access_token');
-    if (!token) {
-      throw new Error('No access token found');
-    }
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  }
-
-  async getUserProfile(): Promise<UserProfile> {
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/me`,
-      this.getAuthHeader()
-    );
-    return response.data;
-  }
-
-  async getTopArtists(
-    timeRange: TimeRange = 'medium_term',
-    limit: number = 50
-  ): Promise<SpotifyArtist[]> {
-    const response = await axios.get<TopItemsResponse<SpotifyArtist>>(
-      `${SPOTIFY_API_BASE}/me/top/artists`,
-      {
-        ...this.getAuthHeader(),
-        params: { time_range: timeRange, limit },
-      }
-    );
-    return response.data.items;
-  }
-
-  async getTopTracks(
-    timeRange: TimeRange = 'medium_term',
-    limit: number = 50
-  ): Promise<SpotifyTrack[]> {
-    const response = await axios.get<TopItemsResponse<SpotifyTrack>>(
-      `${SPOTIFY_API_BASE}/me/top/tracks`,
-      {
-        ...this.getAuthHeader(),
-        params: { time_range: timeRange, limit },
-      }
-    );
-    return response.data.items;
-  }
-
-  async getRecentlyPlayed(limit: number = 50): Promise<RecentlyPlayedResponse> {
-    const response = await axios.get<RecentlyPlayedResponse>(
-      `${SPOTIFY_API_BASE}/me/player/recently-played`,
-      {
-        ...this.getAuthHeader(),
-        params: { limit },
-      }
-    );
-    return response.data;
-  }
-
-  async getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {
-    // Spotify's audio-features endpoint can be restricted in Development Mode
-    // Batch requests into smaller chunks of 20 IDs to avoid 403 errors
-    const BATCH_SIZE = 20;
-    const batches: string[][] = [];
-
-    for (let i = 0; i < trackIds.length; i += BATCH_SIZE) {
-      batches.push(trackIds.slice(i, i + BATCH_SIZE));
-    }
-
-    try {
-      // Make parallel requests for all batches
-      const batchPromises = batches.map(async (batch) => {
-        try {
-          const response = await axios.get(
-            `${SPOTIFY_API_BASE}/audio-features`,
-            {
-              ...this.getAuthHeader(),
-              params: { ids: batch.join(',') },
-            }
-          );
-          return response.data.audio_features.filter((f: AudioFeatures | null) => f !== null);
-        } catch (error) {
-          console.warn(`Failed to fetch audio features for batch:`, error);
-          return []; // Return empty array for failed batches
-        }
-      });
-
-      const results = await Promise.all(batchPromises);
-      return results.flat();
-    } catch (error) {
-      console.error('Error fetching audio features:', error);
-      throw error;
-    }
-  }
-
-  async getArtist(artistId: string): Promise<SpotifyArtist> {
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/artists/${artistId}`,
-      this.getAuthHeader()
-    );
-    return response.data;
-  }
-
-  // Helper method for paginated requests
-  private async getAllPaginated<T>(
-    url: string,
-    limit: number = 50,
-    maxItems?: number
-  ): Promise<T[]> {
-    const allItems: T[] = [];
-    let offset = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await axios.get<PaginatedResponse<T>>(
-        url,
-        {
-          ...this.getAuthHeader(),
-          params: { limit, offset },
-        }
-      );
-
-      allItems.push(...response.data.items);
-      offset += limit;
-      hasMore = response.data.next !== null;
-
-      if (maxItems && allItems.length >= maxItems) {
-        return allItems.slice(0, maxItems);
-      }
-    }
-
-    return allItems;
-  }
-
-  // Saved Library
-  async getSavedTracks(limit?: number): Promise<SavedTrack[]> {
-    return this.getAllPaginated<SavedTrack>(
-      `${SPOTIFY_API_BASE}/me/tracks`,
-      50,
-      limit
-    );
-  }
-
-  async getSavedAlbums(limit?: number): Promise<SavedAlbum[]> {
-    return this.getAllPaginated<SavedAlbum>(
-      `${SPOTIFY_API_BASE}/me/albums`,
-      50,
-      limit
-    );
-  }
-
-  // Playlists
-  async getPlaylists(limit?: number): Promise<Playlist[]> {
-    return this.getAllPaginated<Playlist>(
-      `${SPOTIFY_API_BASE}/me/playlists`,
-      50,
-      limit
-    );
-  }
-
-  async getPlaylistTracks(playlistId: string): Promise<PlaylistTrack[]> {
-    return this.getAllPaginated<PlaylistTrack>(
-      `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks`,
-      100
-    );
-  }
-
-  // Followed Artists
-  async getFollowedArtists(): Promise<SpotifyArtist[]> {
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/me/following`,
-      {
-        ...this.getAuthHeader(),
-        params: { type: 'artist', limit: 50 },
-      }
-    );
-    return response.data.artists.items;
-  }
-
-  // Recommendations
-  async getRecommendations(
-    seedTracks?: string[],
-    seedArtists?: string[],
-    limit: number = 20
-  ): Promise<Recommendations> {
-    const params: Record<string, string | number> = { limit };
-
-    if (seedTracks && seedTracks.length > 0) {
-      params.seed_tracks = seedTracks.slice(0, 5).join(',');
-    }
-    if (seedArtists && seedArtists.length > 0) {
-      params.seed_artists = seedArtists.slice(0, 5).join(',');
-    }
-
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/recommendations`,
-      {
-        ...this.getAuthHeader(),
-        params,
-      }
-    );
-    return response.data;
-  }
-
-  // Get album details
-  async getAlbum(albumId: string): Promise<SpotifyAlbum> {
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/albums/${albumId}`,
-      this.getAuthHeader()
-    );
-    return response.data;
-  }
-
-  // Get multiple albums
-  async getAlbums(albumIds: string[]): Promise<SpotifyAlbum[]> {
-    const response = await axios.get(
-      `${SPOTIFY_API_BASE}/albums`,
-      {
-        ...this.getAuthHeader(),
-        params: { ids: albumIds.join(',') },
-      }
-    );
-    return response.data.albums;
+  constructor(message: string, endpoint: string, status?: number, retryAfter?: number) {
+    super(message);
+    this.name = 'SpotifyAPIError';
+    this.endpoint = endpoint;
+    this.status = status;
+    this.retryAfter = retryAfter;
   }
 }
 
-export const spotifyService = new SpotifyService();
+function messageForStatus(status: number): string {
+  switch (status) {
+    case 401:
+      return 'Your session has expired. Please log in again.';
+    case 403:
+      return 'Spotify denied access to this data. Your app may not have access to this endpoint.';
+    case 404:
+      return 'This data could not be found on Spotify.';
+    case 429:
+      return 'Spotify is rate limiting requests. Please wait a moment and try again.';
+    default:
+      return status >= 500
+        ? 'Spotify is having trouble right now. Please try again later.'
+        : `Spotify request failed (HTTP ${status}).`;
+  }
+}
+
+type QueryParams = Record<string, string | number | undefined>;
+
+/** Authenticated GET against the Web API. `path` may be a relative path or a full `next` URL. */
+async function request<T>(path: string, params: QueryParams = {}): Promise<T> {
+  const token = await getValidAccessToken();
+  if (!token) {
+    throw new SpotifyAPIError(messageForStatus(401), path, 401);
+  }
+
+  const url = new URL(path.startsWith('http') ? path : `${SPOTIFY_API_BASE}${path}`);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) url.searchParams.set(key, String(value));
+  }
+
+  const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+
+  if (!response.ok) {
+    const retryAfter = Number(response.headers.get('Retry-After')) || undefined;
+    throw new SpotifyAPIError(
+      messageForStatus(response.status),
+      url.pathname,
+      response.status,
+      retryAfter,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
+/** Follows `next` links until there are no more pages or `maxItems` is reached. */
+async function getAllPages<T>(path: string, maxItems?: number): Promise<T[]> {
+  const items: T[] = [];
+  let next: string | null = path;
+  let params: QueryParams = { limit: PAGE_SIZE };
+
+  while (next && (maxItems === undefined || items.length < maxItems)) {
+    const page: Paging<T> = await request<Paging<T>>(next, params);
+    items.push(...page.items);
+    next = page.next;
+    params = {}; // `next` already carries limit/offset
+  }
+
+  return maxItems === undefined ? items : items.slice(0, maxItems);
+}
+
+export function getCurrentUser(): Promise<UserProfile> {
+  return request<UserProfile>('/me');
+}
+
+export async function getTopArtists(
+  timeRange: TimeRange,
+  limit: number = TOP_ITEMS_LIMIT,
+): Promise<SpotifyArtist[]> {
+  const page = await request<Paging<SpotifyArtist>>('/me/top/artists', {
+    time_range: timeRange,
+    limit,
+  });
+  return page.items;
+}
+
+export async function getTopTracks(
+  timeRange: TimeRange,
+  limit: number = TOP_ITEMS_LIMIT,
+): Promise<SpotifyTrack[]> {
+  const page = await request<Paging<SpotifyTrack>>('/me/top/tracks', {
+    time_range: timeRange,
+    limit,
+  });
+  return page.items;
+}
+
+export async function getRecentlyPlayed(
+  limit: number = TOP_ITEMS_LIMIT,
+): Promise<RecentlyPlayedTrack[]> {
+  const page = await request<CursorPaging<RecentlyPlayedTrack>>('/me/player/recently-played', {
+    limit,
+  });
+  return page.items;
+}
+
+/**
+ * Audio features for the given tracks. Spotify restricted this endpoint for
+ * apps created after 27 Nov 2024, so expect a 403 for most new apps.
+ */
+export async function getAudioFeatures(trackIds: string[]): Promise<AudioFeatures[]> {
+  const batches: string[][] = [];
+  for (let i = 0; i < trackIds.length; i += AUDIO_FEATURES_BATCH_SIZE) {
+    batches.push(trackIds.slice(i, i + AUDIO_FEATURES_BATCH_SIZE));
+  }
+
+  const results = await Promise.all(
+    batches.map((ids) =>
+      request<{ audio_features: (AudioFeatures | null)[] }>('/audio-features', {
+        ids: ids.join(','),
+      }),
+    ),
+  );
+
+  // Spotify returns null for tracks without analysis.
+  return results.flatMap((r) => r.audio_features.filter((f): f is AudioFeatures => f !== null));
+}
+
+export function getSavedTracks(maxItems?: number): Promise<SavedTrack[]> {
+  return getAllPages<SavedTrack>('/me/tracks', maxItems);
+}
+
+export function getPlaylists(maxItems?: number): Promise<Playlist[]> {
+  return getAllPages<Playlist>('/me/playlists', maxItems);
+}

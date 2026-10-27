@@ -1,142 +1,214 @@
-import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ExternalLink } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
+import { useMemo } from 'react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Music } from 'lucide-react';
 import type { SpotifyArtist, TimeRange } from '../types/spotify';
+import { useTopArtists } from '../hooks/useSpotify';
+import { truncateString } from '../utils/formatters';
+import { hasPopularity } from '../utils/stats';
+import {
+  ARTIST_NAME_MAX_LENGTH,
+  CHART_AXIS_STROKE,
+  CHART_COLORS,
+  CHART_GRID_STROKE,
+  CHART_HEIGHT,
+  CHART_TOOLTIP_STYLE,
+} from '../constants';
+import ChartCard from './ChartCard';
+import CoverImage from './CoverImage';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
+import SpotifyLink from './SpotifyLink';
 
 interface TopArtistsProps {
   timeRange: TimeRange;
+  /** Compact top-5 list for the overview tab. */
+  preview?: boolean;
 }
 
-export default function TopArtists({ timeRange }: TopArtistsProps) {
-  const [artists, setArtists] = useState<SpotifyArtist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function TopArtists({ timeRange, preview = false }: TopArtistsProps) {
+  const { data: artists, isPending, isError, error, refetch } = useTopArtists(timeRange);
 
-  useEffect(() => {
-    const fetchArtists = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getTopArtists(timeRange, 20);
-        setArtists(data);
-      } catch (err) {
-        setError('Failed to load top artists');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const chartData = useMemo(
+    () =>
+      (artists ?? []).slice(0, 10).map((artist) => ({
+        name: truncateString(artist.name, ARTIST_NAME_MAX_LENGTH),
+        popularity: artist.popularity ?? 0,
+      })),
+    [artists],
+  );
 
-    fetchArtists();
-  }, [timeRange]);
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (artists.length === 0) return <EmptyState>No artist data available</EmptyState>;
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
+  // Spotify stopped returning popularity to Development Mode apps in 2026.
+  const showPopularity = hasPopularity(artists);
 
-  const chartData = artists.slice(0, 10).map((artist, index) => ({
-    name: artist.name.length > 15 ? artist.name.substring(0, 15) + '...' : artist.name,
-    popularity: artist.popularity || 0,
-    rank: index + 1,
-  }));
+  if (preview) {
+    return (
+      <ol className="space-y-3" aria-label="Top artists preview">
+        {artists.slice(0, 5).map((artist, index) => (
+          <li
+            key={artist.id}
+            className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-white/5"
+          >
+            <span
+              className="w-8 shrink-0 text-right text-xl font-bold text-spotify-green tabular-nums"
+              aria-hidden="true"
+            >
+              {index + 1}
+            </span>
+            <CoverImage
+              images={artist.images}
+              alt=""
+              size={40}
+              className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white/10"
+              fallbackIcon={Music}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{artist.name}</p>
+              <p className="truncate text-xs text-gray-400">
+                {artist.genres?.slice(0, 2).join(', ') || 'Artist'}
+              </p>
+            </div>
+            {showPopularity && (
+              <span className="shrink-0 text-sm text-gray-400">{artist.popularity}</span>
+            )}
+          </li>
+        ))}
+      </ol>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Mobile View - Compact List */}
-      <div className="card md:hidden">
-        <h3 className="text-xl font-bold mb-4">Top Artists by Popularity</h3>
-        <div className="space-y-3">
-          {artists.slice(0, 10).map((artist, index) => (
-            <div key={artist.id} className="flex items-center gap-3">
-              <span className="text-spotify-green font-bold text-sm w-6">{index + 1}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-sm truncate">{artist.name}</span>
-                  <span className="text-xs text-gray-400 ml-2">{artist.popularity}</span>
-                </div>
-                <div className="bg-gray-700 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-spotify-green to-spotify-green-light h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${artist.popularity}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Desktop View - Chart */}
-      <div className="card hidden md:block">
-        <h3 className="text-xl font-bold mb-4">Popularity Chart</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="name" stroke="#9CA3AF" angle={-45} textAnchor="end" height={100} />
-            <YAxis stroke="#9CA3AF" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1F2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-              }}
-            />
-            <Bar dataKey="popularity" fill="#1DB954" radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Artist Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {artists.map((artist, index) => (
-          <div key={artist.id} className="card transition-all duration-300">
-            <div className="flex items-start gap-4">
-              <div className="relative">
-                <span className="absolute -top-2 -left-2 bg-gradient-to-br from-spotify-green to-spotify-green-light text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center z-10 shadow-glow-green ring-2 ring-gray-900 shadow-[0_0_0_3px_rgba(255,255,255,0.9)]">
-                  <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">{index + 1}</span>
-                </span>
-                {artist.images && artist.images[0] ? (
-                  <img
-                    src={artist.images[0].url}
-                    alt={artist.name}
-                    className="w-16 h-16 rounded-full object-cover ring-2 ring-white/10 shadow-md"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/10">
-                    <span className="text-2xl">🎵</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold truncate">{artist.name}</h4>
-                {artist.genres && artist.genres.length > 0 && (
-                  <p className="text-sm text-gray-400 truncate">
-                    {artist.genres.slice(0, 2).join(', ')}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex-1 bg-white/10 rounded-full h-2 overflow-hidden backdrop-blur-sm">
-                    <div
-                      className="bg-gradient-to-r from-spotify-green to-spotify-green-light h-2 rounded-full shadow-glow-green transition-all duration-500"
-                      style={{ width: `${artist.popularity}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-300 font-medium">{artist.popularity}</span>
-                </div>
-              </div>
-              <a
-                href={artist.external_urls.spotify}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-spotify-green transition-colors"
-              >
-                <ExternalLink size={16} />
-              </a>
-            </div>
+      {showPopularity && (
+        <>
+          {/* Mobile: list with bars */}
+          <div className="md:hidden">
+            <ChartCard title="Top Artists by Popularity">
+              <ol className="space-y-3">
+                {artists.slice(0, 10).map((artist, index) => (
+                  <li key={artist.id} className="flex items-center gap-3">
+                    <span className="w-6 text-sm font-bold text-spotify-green" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="truncate text-sm font-medium">{artist.name}</span>
+                        <span className="ml-2 text-xs text-gray-400">{artist.popularity}</span>
+                      </div>
+                      <PopularityBar value={artist.popularity} label={artist.name} />
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </ChartCard>
           </div>
+
+          {/* Desktop: chart */}
+          <div className="hidden md:block">
+            <ChartCard title="Popularity Chart">
+              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
+                  <XAxis
+                    dataKey="name"
+                    stroke={CHART_AXIS_STROKE}
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
+                  <YAxis stroke={CHART_AXIS_STROKE} />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Bar
+                    dataKey="popularity"
+                    fill={CHART_COLORS.SPOTIFY_GREEN}
+                    radius={[8, 8, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
+        </>
+      )}
+
+      <ol
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        aria-label="All top artists"
+      >
+        {artists.map((artist, index) => (
+          <ArtistCard
+            key={artist.id}
+            artist={artist}
+            rank={index + 1}
+            showPopularity={showPopularity}
+          />
         ))}
-      </div>
+      </ol>
     </div>
+  );
+}
+
+function PopularityBar({ value, label }: { value: number | undefined; label: string }) {
+  return (
+    <div
+      className="h-2 flex-1 overflow-hidden rounded-full bg-white/10"
+      role="progressbar"
+      aria-valuenow={value ?? 0}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${label} popularity`}
+    >
+      <div
+        className="h-2 rounded-full bg-linear-to-r from-spotify-green to-spotify-green-light shadow-glow-green transition-all duration-500"
+        style={{ width: `${value ?? 0}%` }}
+      />
+    </div>
+  );
+}
+
+interface ArtistCardProps {
+  artist: SpotifyArtist;
+  rank: number;
+  showPopularity: boolean;
+}
+
+function ArtistCard({ artist, rank, showPopularity }: ArtistCardProps) {
+  return (
+    <li className="card transition-all duration-300">
+      <div className="flex items-center gap-3">
+        <span
+          className="w-10 shrink-0 text-right text-2xl font-bold text-spotify-green tabular-nums"
+          aria-label={`Rank ${rank}`}
+        >
+          {rank}
+        </span>
+
+        <CoverImage
+          images={artist.images}
+          alt=""
+          size={48}
+          className="h-12 w-12 shrink-0 rounded-full shadow-md ring-2 ring-white/10"
+          fallbackIcon={Music}
+        />
+
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate font-semibold">{artist.name}</h4>
+          {artist.genres && artist.genres.length > 0 && (
+            <p className="truncate text-sm text-gray-400">{artist.genres.slice(0, 2).join(', ')}</p>
+          )}
+          {showPopularity && (
+            <div className="mt-1 flex items-center gap-2">
+              <PopularityBar value={artist.popularity} label={artist.name} />
+              <span className="w-6 text-xs font-medium text-gray-300">{artist.popularity}</span>
+            </div>
+          )}
+        </div>
+
+        <SpotifyLink href={artist.external_urls.spotify} label={artist.name} size={16} />
+      </div>
+    </li>
   );
 }

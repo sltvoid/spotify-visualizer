@@ -1,7 +1,22 @@
+/*
+ * Spotify Web API response types (only the fields this app reads).
+ *
+ * Since February 2026, Development Mode apps no longer receive some fields
+ * (e.g. `popularity`, profile `email`/`country`/`followers`/`product`), so those
+ * are optional here and the UI hides whatever is missing.
+ * https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide
+ */
+
+export type TimeRange = 'short_term' | 'medium_term' | 'long_term';
+
 export interface SpotifyImage {
   url: string;
-  height: number;
-  width: number;
+  height: number | null;
+  width: number | null;
+}
+
+interface ExternalUrls {
+  spotify: string;
 }
 
 export interface SpotifyArtist {
@@ -10,9 +25,7 @@ export interface SpotifyArtist {
   images?: SpotifyImage[];
   genres?: string[];
   popularity?: number;
-  external_urls: {
-    spotify: string;
-  };
+  external_urls: ExternalUrls;
 }
 
 export interface SpotifyAlbum {
@@ -20,12 +33,8 @@ export interface SpotifyAlbum {
   name: string;
   images: SpotifyImage[];
   release_date: string;
-  total_tracks?: number;
-  album_type?: string;
   artists?: SpotifyArtist[];
-  external_urls: {
-    spotify: string;
-  };
+  external_urls: ExternalUrls;
 }
 
 export interface SpotifyTrack {
@@ -34,11 +43,8 @@ export interface SpotifyTrack {
   artists: SpotifyArtist[];
   album: SpotifyAlbum;
   duration_ms: number;
-  popularity: number;
-  preview_url?: string;
-  external_urls: {
-    spotify: string;
-  };
+  popularity?: number;
+  external_urls: ExternalUrls;
 }
 
 export interface RecentlyPlayedTrack {
@@ -64,30 +70,13 @@ export interface AudioFeatures {
 
 export interface UserProfile {
   id: string;
-  display_name: string;
-  email: string;
-  images: SpotifyImage[];
-  followers: {
-    total: number;
-  };
-  country: string;
-  product: string;
-  external_urls: {
-    spotify: string;
-  };
-}
-
-export type TimeRange = 'short_term' | 'medium_term' | 'long_term';
-
-export interface TopItemsResponse<T> {
-  items: T[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export interface RecentlyPlayedResponse {
-  items: RecentlyPlayedTrack[];
+  display_name: string | null;
+  images?: SpotifyImage[];
+  external_urls: ExternalUrls;
+  email?: string;
+  country?: string;
+  product?: string;
+  followers?: { total: number };
 }
 
 export interface SavedTrack {
@@ -95,49 +84,38 @@ export interface SavedTrack {
   track: SpotifyTrack;
 }
 
-export interface SavedAlbum {
-  added_at: string;
-  album: SpotifyAlbum;
+interface PlaylistItemsRef {
+  href: string;
+  total: number;
 }
 
 export interface Playlist {
   id: string;
   name: string;
   description: string | null;
-  images: SpotifyImage[];
-  tracks: {
-    total: number;
-    href: string;
-  };
+  images: SpotifyImage[] | null;
+  /** Renamed from `tracks` in the February 2026 API update. */
+  items?: PlaylistItemsRef;
+  /** Pre-2026 name for `items`; still returned to Extended Quota apps. */
+  tracks?: PlaylistItemsRef;
   owner: {
     id: string;
-    display_name: string;
+    display_name: string | null;
   };
-  public: boolean;
+  public: boolean | null;
   collaborative: boolean;
-  external_urls: {
-    spotify: string;
-  };
+  external_urls: ExternalUrls;
 }
 
-export interface PlaylistTrack {
-  added_at: string;
-  track: SpotifyTrack;
-}
-
-export interface Recommendations {
-  tracks: SpotifyTrack[];
-  seeds: {
-    id: string;
-    type: string;
-  }[];
-}
-
-export interface PaginatedResponse<T> {
+export interface Paging<T> {
   items: T[];
   total: number;
   limit: number;
   offset: number;
   next: string | null;
-  previous: string | null;
+}
+
+export interface CursorPaging<T> {
+  items: T[];
+  next: string | null;
 }

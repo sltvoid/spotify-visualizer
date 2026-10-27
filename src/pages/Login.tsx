@@ -1,63 +1,95 @@
-import { Music } from 'lucide-react';
-import { getAuthUrl } from '../utils/auth';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { AlertTriangle, Music } from 'lucide-react';
+import { getAuthUrl, isAuthConfigured } from '../utils/auth';
+
+const FEATURES = [
+  'Top Artists, Tracks & Albums',
+  'Listening Insights',
+  'Genre Distribution',
+  'Listening History Timeline',
+  'Multiple Time Ranges',
+];
 
 export default function Login() {
+  const [searchParams] = useSearchParams();
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  const configError = isAuthConfigured()
+    ? null
+    : 'This app is missing its Spotify Client ID. Set VITE_SPOTIFY_CLIENT_ID and rebuild.';
+  const error = configError ?? loginError ?? searchParams.get('error');
+
   const handleLogin = async () => {
-    const authUrl = await getAuthUrl();
-    window.location.href = authUrl;
+    setIsRedirecting(true);
+    try {
+      window.location.assign(await getAuthUrl());
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : 'Could not start login.');
+      setIsRedirecting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative z-10">
-      <div className="max-w-md w-full text-center">
-        <div className="flex justify-center mb-8">
-          <div className="bg-gradient-to-br from-spotify-green to-spotify-green-light p-6 rounded-full shadow-glow-green-strong animate-float">
-            <Music size={64} className="text-white drop-shadow-lg" />
+    <main className="relative z-10 flex min-h-screen items-center justify-center p-4">
+      <div className="w-full max-w-md text-center">
+        <div className="mb-8 flex justify-center">
+          <div className="animate-float rounded-full bg-linear-to-br from-spotify-green to-spotify-green-light p-6 shadow-glow-green-strong">
+            <Music size={64} className="text-white drop-shadow-lg" aria-hidden="true" />
           </div>
         </div>
 
-        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-transparent drop-shadow-lg">
+        <h1 className="mb-4 bg-linear-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-5xl font-bold text-transparent drop-shadow-lg">
           Spotify Stats
         </h1>
 
-        <p className="text-gray-300 text-lg mb-8">
+        <p className="mb-8 text-lg text-gray-300">
           Discover your music insights and visualize your listening habits
         </p>
 
-        <div className="card mb-6 backdrop-blur-glass hover:shadow-glass-hover transition-all duration-300">
-          <h2 className="text-xl font-semibold mb-4 text-white">Features</h2>
-          <ul className="text-left space-y-3 text-gray-200">
-            <li className="flex items-center gap-3 group">
-              <span className="text-spotify-green text-xl group-hover:scale-125 transition-transform duration-200">•</span>
-              <span className="group-hover:text-white transition-colors duration-200">Top Artists, Tracks & Albums</span>
-            </li>
-            <li className="flex items-center gap-3 group">
-              <span className="text-spotify-green text-xl group-hover:scale-125 transition-transform duration-200">•</span>
-              <span className="group-hover:text-white transition-colors duration-200">Audio Features Analysis</span>
-            </li>
-            <li className="flex items-center gap-3 group">
-              <span className="text-spotify-green text-xl group-hover:scale-125 transition-transform duration-200">•</span>
-              <span className="group-hover:text-white transition-colors duration-200">Genre Distribution</span>
-            </li>
-            <li className="flex items-center gap-3 group">
-              <span className="text-spotify-green text-xl group-hover:scale-125 transition-transform duration-200">•</span>
-              <span className="group-hover:text-white transition-colors duration-200">Listening History Timeline</span>
-            </li>
-            <li className="flex items-center gap-3 group">
-              <span className="text-spotify-green text-xl group-hover:scale-125 transition-transform duration-200">•</span>
-              <span className="group-hover:text-white transition-colors duration-200">Multiple Time Ranges</span>
-            </li>
+        <section className="card mb-6">
+          <h2 className="mb-4 text-xl font-semibold text-white">Features</h2>
+          <ul className="space-y-3 text-left text-gray-200">
+            {FEATURES.map((feature) => (
+              <li key={feature} className="group flex items-center gap-3">
+                <span
+                  className="text-xl text-spotify-green transition-transform duration-200 group-hover:scale-125"
+                  aria-hidden="true"
+                >
+                  •
+                </span>
+                <span className="transition-colors duration-200 group-hover:text-white">
+                  {feature}
+                </span>
+              </li>
+            ))}
           </ul>
-        </div>
+        </section>
 
-        <button onClick={handleLogin} className="btn-primary w-full text-lg">
-          Login with Spotify
+        {error && (
+          <div
+            className="mb-4 flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-left text-red-300"
+            role="alert"
+          >
+            <AlertTriangle size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <p>{error}</p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleLogin}
+          disabled={Boolean(configError) || isRedirecting}
+          className="btn-primary w-full text-lg disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isRedirecting ? 'Redirecting to Spotify...' : 'Login with Spotify'}
         </button>
 
-        <p className="text-gray-400 text-sm mt-4">
-          We only access your listening data. We don't modify anything.
+        <p className="mt-4 text-sm text-gray-400">
+          We only read your listening data. We never change anything in your account.
         </p>
       </div>
-    </div>
+    </main>
   );
 }

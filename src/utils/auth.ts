@@ -1,158 +1,237 @@
-const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI || 'http://localhost:5173/callback';
+import { SPOTIFY_AUTH_URL, SPOTIFY_SCOPES, SPOTIFY_TOKEN_URL, STORAGE_KEYS } from '../constants';
 
-const SCOPES = [
-  'user-read-private',
-  'user-read-email',
-  'user-top-read',
-  'user-read-recently-played',
-  'user-library-read',
-  'playlist-read-private',
-  'playlist-read-collaborative',
-  'user-follow-read',
-].join(' ');
+const CLIENT_ID: string | undefined = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 
-// Generate code verifier for PKCE
-const generateCodeVerifier = (): string => {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return base64URLEncode(array);
-};
+/** Refresh this long before the token actually expires. */
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
-// Generate code challenge from verifier
-const generateCodeChallenge = async (verifier: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return base64URLEncode(new Uint8Array(hash));
-};
+/**
+ * Redirect URI registered in the Spotify dashboard. Defaults to this origin's
+ * `/callback` so the same build works locally and in production.
+ */
+export function getRedirectUri(): string {
+  return import.meta.env.VITE_SPOTIFY_REDIRECT_URI || `${window.location.origin}/callback`;
+}
 
-// Base64 URL encode
-const base64URLEncode = (buffer: Uint8Array): string => {
-  const base64 = btoa(String.fromCharCode(...buffer));
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-};
+export function isAuthConfigured(): boolean {
+  return Boolean(CLIENT_ID);
+}
 
-export const getAuthUrl = async (): Promise<string> => {
-  if (!CLIENT_ID) {
-    alert('❌ Error: Spotify Client ID is not configured!\n\nPlease add VITE_SPOTIFY_CLIENT_ID to your Vercel environment variables and redeploy.');
-    throw new Error('VITE_SPOTIFY_CLIENT_ID is not defined. Check your environment variables.');
+// ---------------------------------------------------------------------------
+// PKCE helpers
+// ---------------------------------------------------------------------------
+
+export function base64UrlEncode(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+export function generateCodeVerifier(): string {
+  return base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+export async function generateCodeChallenge(verifier: string): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return base64UrlEncode(new Uint8Array(hash));
+}
+
+function generateState(): string {
+  return base64UrlEncode(crypto.getRandomValues(new Uint8Array(16)));
+}
+
+// ---------------------------------------------------------------------------
+// Token storage
+// ---------------------------------------------------------------------------
+
+interface TokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  token_type: string;
+}
+
+function storeTokens(data: TokenResponse): void {
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.access_token);
+  // Spotify may rotate the refresh token; keep the old one if it doesn't.
+  if (data.refresh_token) {
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+  }
+  localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(Date.now() + data.expires_in * 1000));
+}
+
+export function getAccessToken(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+}
+
+export function isTokenExpired(now: number = Date.now()): boolean {
+  const expiry = Number(localStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY));
+  return !expiry || now >= expiry - TOKEN_EXPIRY_BUFFER_MS;
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY);
+}
+
+export function logout(): void {
+  clearTokens();
+  window.location.assign('/');
+}
+
+async function requestToken(body: Record<string, string>): Promise<TokenResponse> {
+  const response = await fetch(SPOTIFY_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(body),
+  });
+
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}));
+    throw new Error(details.error_description || details.error || `HTTP ${response.status}`, {
+      cause: response.status,
+    });
   }
 
-  const state = generateRandomString(16);
+  return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Authorization flow
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the Spotify authorization URL (Authorization Code with PKCE).
+ * The state and code verifier live in sessionStorage: they only need to
+ * survive the round trip to Spotify in this tab.
+ */
+export async function getAuthUrl(): Promise<string> {
+  if (!CLIENT_ID) {
+    throw new Error(
+      'Spotify Client ID is not configured. Add VITE_SPOTIFY_CLIENT_ID to your environment.',
+    );
+  }
+
+  const state = generateState();
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-  // Store state and verifier for callback
-  localStorage.setItem('spotify_auth_state', state);
-  localStorage.setItem('spotify_code_verifier', codeVerifier);
+  sessionStorage.setItem(STORAGE_KEYS.AUTH_STATE, state);
+  sessionStorage.setItem(STORAGE_KEYS.CODE_VERIFIER, codeVerifier);
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: 'code',
-    redirect_uri: REDIRECT_URI,
-    state: state,
-    scope: SCOPES,
+    redirect_uri: getRedirectUri(),
+    state,
+    scope: SPOTIFY_SCOPES.join(' '),
     code_challenge_method: 'S256',
     code_challenge: codeChallenge,
   });
 
-  const authUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
-  console.log('🚀 Using PKCE flow, redirecting to:', authUrl);
+  return `${SPOTIFY_AUTH_URL}?${params}`;
+}
 
-  return authUrl;
-};
+export type CallbackResult = { ok: true } | { ok: false; error: string };
 
-export const handleCallback = async (): Promise<string | null> => {
-  console.log('🔍 Callback Debug (PKCE):');
-  console.log('Full URL:', window.location.href);
+// An authorization code can only be exchanged once. React StrictMode runs
+// effects twice in development, so share one exchange per code.
+const pendingExchanges = new Map<string, Promise<CallbackResult>>();
 
-  const params = new URLSearchParams(window.location.search);
+/** Exchanges the authorization code in `search` (the callback URL's query) for tokens. */
+export function handleCallback(search: string = window.location.search): Promise<CallbackResult> {
+  const params = new URLSearchParams(search);
   const code = params.get('code');
-  const state = params.get('state');
-  const error = params.get('error');
 
-  if (error) {
-    console.error('❌ Spotify returned error:', error);
-    alert(`Spotify authorization failed: ${error}`);
-    return null;
+  if (params.get('error')) {
+    return Promise.resolve({ ok: false, error: `Spotify denied access: ${params.get('error')}` });
+  }
+  if (!code) {
+    return Promise.resolve({ ok: false, error: 'Missing authorization code.' });
   }
 
-  const storedState = localStorage.getItem('spotify_auth_state');
-  const codeVerifier = localStorage.getItem('spotify_code_verifier');
-
-  console.log('Code:', code ? 'Found ✅' : 'Not found ❌');
-  console.log('State from URL:', state);
-  console.log('Stored State:', storedState);
-  console.log('Code Verifier:', codeVerifier ? 'Found ✅' : 'Not found ❌');
-
-  if (state !== storedState) {
-    console.error('❌ State mismatch');
-    return null;
+  let exchange = pendingExchanges.get(code);
+  if (!exchange) {
+    exchange = exchangeCode(code, params.get('state'));
+    pendingExchanges.set(code, exchange);
   }
+  return exchange;
+}
 
-  if (!code || !codeVerifier) {
-    console.error('❌ Missing code or verifier');
-    return null;
+async function exchangeCode(code: string, state: string | null): Promise<CallbackResult> {
+  const storedState = sessionStorage.getItem(STORAGE_KEYS.AUTH_STATE);
+  const codeVerifier = sessionStorage.getItem(STORAGE_KEYS.CODE_VERIFIER);
+  sessionStorage.removeItem(STORAGE_KEYS.AUTH_STATE);
+  sessionStorage.removeItem(STORAGE_KEYS.CODE_VERIFIER);
+
+  // Reject responses we didn't ask for (CSRF protection).
+  if (!state || state !== storedState) {
+    return { ok: false, error: 'Login session did not match. Please try again.' };
+  }
+  if (!codeVerifier || !CLIENT_ID) {
+    return { ok: false, error: 'Login session expired. Please try again.' };
   }
 
   try {
-    // Exchange code for token
-    console.log('🔄 Exchanging code for access token...');
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: CLIENT_ID!,
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: REDIRECT_URI,
-        code_verifier: codeVerifier,
-      }),
+    const data = await requestToken({
+      client_id: CLIENT_ID,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: getRedirectUri(),
+      code_verifier: codeVerifier,
     });
+    storeTokens(data);
+    return { ok: true };
+  } catch (err) {
+    console.error('Token exchange failed:', err);
+    return { ok: false, error: 'Could not complete login with Spotify. Please try again.' };
+  }
+}
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ Token exchange failed:', errorData);
-      throw new Error(`Token exchange failed: ${errorData.error}`);
+// ---------------------------------------------------------------------------
+// Refresh
+// ---------------------------------------------------------------------------
+
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * Refreshes the access token. Concurrent callers share one request so a
+ * rotated refresh token is never used twice.
+ */
+export function refreshAccessToken(): Promise<string | null> {
+  refreshInFlight ??= doRefresh().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefresh(): Promise<string | null> {
+  const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+  if (!refreshToken || !CLIENT_ID) return null;
+
+  try {
+    const data = await requestToken({
+      client_id: CLIENT_ID,
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    });
+    storeTokens(data);
+    return data.access_token;
+  } catch (err) {
+    console.error('Token refresh failed:', err);
+    // 400/401 means the refresh token is no longer valid.
+    if (err instanceof Error && (err.cause === 400 || err.cause === 401)) {
+      clearTokens();
     }
-
-    const data = await response.json();
-    const accessToken = data.access_token;
-    const refreshToken = data.refresh_token;
-
-    console.log('✅ Token exchange successful!');
-
-    // Store tokens
-    localStorage.setItem('spotify_access_token', accessToken);
-    if (refreshToken) {
-      localStorage.setItem('spotify_refresh_token', refreshToken);
-    }
-
-    // Clean up
-    localStorage.removeItem('spotify_auth_state');
-    localStorage.removeItem('spotify_code_verifier');
-
-    return accessToken;
-  } catch (error) {
-    console.error('❌ Error during token exchange:', error);
     return null;
   }
-};
+}
 
-export const getAccessToken = (): string | null => {
-  return localStorage.getItem('spotify_access_token');
-};
-
-export const logout = (): void => {
-  localStorage.removeItem('spotify_access_token');
-  window.location.href = '/';
-};
-
-const generateRandomString = (length: number): string => {
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const values = crypto.getRandomValues(new Uint8Array(length));
-  return values.reduce((acc, x) => acc + possible[x % possible.length], '');
-};
+/** Returns a usable access token, refreshing it first if needed. */
+export async function getValidAccessToken(): Promise<string | null> {
+  const token = getAccessToken();
+  if (!token) return null;
+  return isTokenExpired() ? refreshAccessToken() : token;
+}

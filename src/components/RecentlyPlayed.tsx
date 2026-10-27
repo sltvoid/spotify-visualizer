@@ -1,96 +1,50 @@
-import { useState, useEffect } from 'react';
-import { ExternalLink, Music, Clock } from 'lucide-react';
-import { spotifyService } from '../services/spotify';
-import type { RecentlyPlayedTrack } from '../types/spotify';
+import { Clock, Music } from 'lucide-react';
+import { useRecentlyPlayed } from '../hooks/useSpotify';
+import { formatRelativeTime, joinArtistNames } from '../utils/formatters';
+import CoverImage from './CoverImage';
+import EmptyState from './EmptyState';
+import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
+import SpotifyLink from './SpotifyLink';
 
 export default function RecentlyPlayed() {
-  const [tracks, setTracks] = useState<RecentlyPlayedTrack[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: items, isPending, isError, error, refetch } = useRecentlyPlayed();
 
-  useEffect(() => {
-    const fetchTracks = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await spotifyService.getRecentlyPlayed(50);
-        setTracks(data.items);
-      } catch (err) {
-        setError('Failed to load recently played tracks');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTracks();
-  }, []);
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-400 text-center p-4">{error}</div>;
-
-  const formatPlayedAt = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
+  if (isPending) return <LoadingSpinner />;
+  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
+  if (items.length === 0) return <EmptyState>No recently played tracks</EmptyState>;
 
   return (
-    <div className="space-y-3">
-      {tracks.map((item, index) => (
-        <div
-          key={`${item.track.id}-${index}`}
-          className="card hover:bg-gray-700/50 transition-all duration-200"
+    <ul className="space-y-3" aria-label="Recently played tracks">
+      {items.map(({ track, played_at }) => (
+        <li
+          key={`${track.id}-${played_at}`}
+          className="card transition-all duration-200 hover:bg-gray-700/50"
         >
           <div className="flex items-center gap-4">
-            {item.track.album.images[0] ? (
-              <img
-                src={item.track.album.images[0].url}
-                alt={item.track.album.name}
-                className="w-14 h-14 rounded object-cover"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded bg-gray-700 flex items-center justify-center">
-                <Music className="text-gray-500" size={20} />
-              </div>
-            )}
+            <CoverImage
+              images={track.album.images}
+              alt={`Album cover for ${track.album.name}`}
+              size={56}
+              className="h-14 w-14 rounded"
+              fallbackIcon={Music}
+            />
 
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium truncate">{item.track.name}</h4>
-              <p className="text-sm text-gray-400 truncate">
-                {item.track.artists.map((a) => a.name).join(', ')}
-              </p>
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate font-medium">{track.name}</h4>
+              <p className="truncate text-sm text-gray-400">{joinArtistNames(track.artists)}</p>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Clock size={12} />
-                  {formatPlayedAt(item.played_at)}
-                </div>
+              <div className="hidden items-center gap-1 text-xs text-gray-500 sm:flex">
+                <Clock size={12} aria-hidden="true" />
+                <time dateTime={played_at}>{formatRelativeTime(played_at)}</time>
               </div>
-
-              <a
-                href={item.track.external_urls.spotify}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-spotify-green transition-colors"
-              >
-                <ExternalLink size={18} />
-              </a>
+              <SpotifyLink href={track.external_urls.spotify} label={track.name} />
             </div>
           </div>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
