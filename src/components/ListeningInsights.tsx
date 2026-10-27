@@ -11,7 +11,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Award, Calendar, Music2, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  Award,
+  Calendar,
+  Music2,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  type LucideIcon,
+} from 'lucide-react';
 import type { TimeRange } from '../types/spotify';
 import { useAudioFeatures, useTopArtists, useTopTracks } from '../hooks/useSpotify';
 import {
@@ -25,12 +33,14 @@ import {
 } from '../utils/stats';
 import {
   CHART_AXIS_STROKE,
+  CHART_BAR_CURSOR,
   CHART_COLORS,
   CHART_GRID_STROKE,
   CHART_HEIGHT,
-  CHART_TOOLTIP_STYLE,
+  CHART_TOOLTIP_PROPS,
   PIE_CHART_OUTER_RADIUS,
 } from '../constants';
+import { formatCount } from '../utils/formatters';
 import ChartCard from './ChartCard';
 import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
@@ -60,11 +70,11 @@ function ScoreCard({ icon, title, score, caption, barColor, detail }: ScoreCardP
             <span>{title}</span>
           </div>
           <div className={`text-3xl font-bold ${scoreColor(score)}`}>{score}</div>
-          <div className="mt-1 text-xs text-gray-500">{caption}</div>
+          <div className="mt-1 text-xs text-gray-400">{caption}</div>
         </div>
         {detail && (
           <div className="text-right">
-            <div className="text-xs text-gray-500">{detail.label}</div>
+            <div className="text-xs text-gray-400">{detail.label}</div>
             <div className="text-sm font-medium">{detail.value}</div>
           </div>
         )}
@@ -83,6 +93,22 @@ function ScoreCard({ icon, title, score, caption, barColor, detail }: ScoreCardP
         />
       </div>
     </div>
+  );
+}
+
+// Score cards come and go with what Spotify returns, so the grid fits however many are shown.
+const SCORE_GRID_COLUMNS: Record<number, string> = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+  4: 'md:grid-cols-2 lg:grid-cols-4',
+};
+
+function ProfileLine({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-3">
+      <Icon size={18} className="mt-0.5 shrink-0 text-spotify-green" aria-hidden="true" />
+      <span>{children}</span>
+    </p>
   );
 }
 
@@ -128,10 +154,12 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
   if (!insights) return <LoadingSpinner />;
 
   const { obscurity, diversity, loyalty, decades, energy, mood } = insights;
+  const scoreCardCount = 2 + (obscurity !== null ? 1 : 0) + (energy !== null ? 1 : 0);
+  const EnergyIcon = energy !== null && energy >= 60 ? TrendingUp : TrendingDown;
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid grid-cols-1 gap-4 ${SCORE_GRID_COLUMNS[scoreCardCount]}`}>
         {obscurity !== null && (
           <ScoreCard
             icon={<Sparkles size={16} aria-hidden="true" />}
@@ -162,13 +190,7 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
         />
         {energy !== null && (
           <ScoreCard
-            icon={
-              energy >= 60 ? (
-                <TrendingUp size={16} aria-hidden="true" />
-              ) : (
-                <TrendingDown size={16} aria-hidden="true" />
-              )
-            }
+            icon={<EnergyIcon size={16} aria-hidden="true" />}
             title="Energy Level"
             score={energy}
             caption={energy >= 70 ? 'High Energy' : energy >= 40 ? 'Balanced' : 'Chill'}
@@ -177,7 +199,8 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* A lone decade chart (no audio features) spans the full width. */}
+      <div className={`grid grid-cols-1 gap-6 ${mood.length > 0 ? 'lg:grid-cols-2' : ''}`}>
         <ChartCard
           title={
             <span className="flex items-center gap-2">
@@ -191,8 +214,14 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
               <XAxis dataKey="decade" stroke={CHART_AXIS_STROKE} />
               <YAxis stroke={CHART_AXIS_STROKE} allowDecimals={false} />
-              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-              <Bar dataKey="count" fill={CHART_COLORS.SPOTIFY_GREEN} radius={[8, 8, 0, 0]} />
+              <Tooltip {...CHART_TOOLTIP_PROPS} cursor={CHART_BAR_CURSOR} />
+              <Bar
+                dataKey="count"
+                name="Tracks"
+                fill={CHART_COLORS.SPOTIFY_GREEN}
+                radius={[8, 8, 0, 0]}
+                maxBarSize={200}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -214,7 +243,10 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
                     <Cell key={entry.name} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                <Tooltip
+                  {...CHART_TOOLTIP_PROPS}
+                  formatter={(value) => formatCount(Number(value), 'track')}
+                />
               </PieChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -224,23 +256,23 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
       <ChartCard title="Your Listening Profile">
         <div className="space-y-3 text-gray-300">
           {obscurity !== null && (
-            <p>
-              🎵 You have a{' '}
+            <ProfileLine icon={Sparkles}>
+              You have a{' '}
               <strong className={scoreColor(obscurity)}>
                 {obscurity >= 60 ? 'niche' : obscurity >= 40 ? 'balanced' : 'mainstream'}
               </strong>{' '}
               taste in music with an obscurity score of {obscurity}.
-            </p>
+            </ProfileLine>
           )}
-          <p>
-            🎨 Your genre diversity is{' '}
+          <ProfileLine icon={Music2}>
+            Your genre diversity is{' '}
             <strong className={scoreColor(diversity.score)}>
               {getScoreLabel(diversity.score).toLowerCase()}
             </strong>
             , exploring {diversity.uniqueGenres} unique genres.
-          </p>
-          <p>
-            ⭐ You show{' '}
+          </ProfileLine>
+          <ProfileLine icon={Award}>
+            You show{' '}
             <strong className={scoreColor(loyalty.score)}>
               {loyalty.score >= 60
                 ? 'high loyalty'
@@ -249,15 +281,15 @@ export default function ListeningInsights({ timeRange }: { timeRange: TimeRange 
                   : 'strong exploration'}
             </strong>{' '}
             to your favorite artists.
-          </p>
+          </ProfileLine>
           {energy !== null && (
-            <p>
-              ⚡ Your music energy level is{' '}
+            <ProfileLine icon={EnergyIcon}>
+              Your music energy level is{' '}
               <strong className={scoreColor(energy)}>
                 {energy >= 70 ? 'very high' : energy >= 40 ? 'moderate' : 'low and chill'}
               </strong>{' '}
               at {energy}/100.
-            </p>
+            </ProfileLine>
           )}
         </div>
       </ChartCard>

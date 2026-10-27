@@ -36,7 +36,7 @@ export default function RecentlyPlayed() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="hidden items-center gap-1 text-xs text-gray-500 sm:flex">
+              <div className="hidden items-center gap-1 text-xs text-gray-400 sm:flex">
                 <Clock size={12} aria-hidden="true" />
                 <time dateTime={played_at}>{formatRelativeTime(played_at)}</time>
               </div>

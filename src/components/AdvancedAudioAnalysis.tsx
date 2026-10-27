@@ -17,20 +17,25 @@ import { useAudioFeatures } from '../hooks/useSpotify';
 import { average, rankBy } from '../utils/stats';
 import {
   CHART_AXIS_STROKE,
+  CHART_BAR_CURSOR,
   CHART_COLORS,
   CHART_GRID_STROKE,
   CHART_HEIGHT,
-  CHART_TOOLTIP_STYLE,
+  CHART_TOOLTIP_PROPS,
   GREEN_PALETTE,
   PIE_CHART_OUTER_RADIUS,
 } from '../constants';
+import { formatCount } from '../utils/formatters';
 import ChartCard from './ChartCard';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
 import StatCard from './StatCard';
 
-const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+// Pitch classes in Spotify's `key` order (0 = C), which is also musical order.
+const KEY_NAMES = ['C', 'C♯/D♭', 'D', 'D♯/E♭', 'E', 'F', 'F♯/G♭', 'G', 'G♯/A♭', 'A', 'A♯/B♭', 'B'];
+
+const tracksLabel = (value: unknown) => formatCount(Number(value), 'track');
 
 const TEMPO_RANGES = [
   { name: '< 80 BPM (Slow)', min: 0, max: 80 },
@@ -44,10 +49,16 @@ const TEMPO_RANGES = [
 function analyze(features: AudioFeatures[]) {
   const major = features.filter((f) => f.mode === 1).length;
   const minor = features.filter((f) => f.mode === 0).length;
-  const keys = rankBy(features, (f) => KEY_NAMES[f.key] ?? null);
+  // Every key in musical order (C to B), including ones with no tracks.
+  const keys = KEY_NAMES.map((name, key) => ({
+    name,
+    value: features.filter((f) => f.key === key).length,
+  }));
+  const topKey = keys.reduce((best, key) => (key.value > best.value ? key : best));
 
   return {
     keys,
+    mostCommonKey: topKey.value > 0 ? topKey.name : null,
     modes: [
       { name: 'Major', value: major },
       { name: 'Minor', value: minor },
@@ -73,10 +84,10 @@ export default function AdvancedAudioAnalysis({ timeRange }: { timeRange: TimeRa
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Average Tempo" value={`${stats.avgTempo.toFixed(1)} BPM`} highlight />
         <StatCard label="Average Loudness" value={`${stats.avgLoudness.toFixed(1)} dB`} />
-        <StatCard label="Most Common Key" value={stats.keys[0]?.name ?? 'N/A'} />
+        <StatCard label="Most Common Key" value={stats.mostCommonKey ?? 'N/A'} />
         <StatCard label="Mode Preference" value={stats.preferredMode} />
       </div>
 
@@ -85,10 +96,21 @@ export default function AdvancedAudioAnalysis({ timeRange }: { timeRange: TimeRa
           <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
             <BarChart data={stats.keys}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-              <XAxis dataKey="name" stroke={CHART_AXIS_STROKE} />
+              {/* Axis shows the sharp name only; the tooltip shows both spellings. */}
+              <XAxis
+                dataKey="name"
+                stroke={CHART_AXIS_STROKE}
+                interval={0}
+                tickFormatter={(name: string) => name.split('/')[0]}
+              />
               <YAxis stroke={CHART_AXIS_STROKE} allowDecimals={false} />
-              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-              <Bar dataKey="value" fill={CHART_COLORS.SPOTIFY_GREEN} radius={[8, 8, 0, 0]} />
+              <Tooltip {...CHART_TOOLTIP_PROPS} cursor={CHART_BAR_CURSOR} />
+              <Bar
+                dataKey="value"
+                name="Tracks"
+                fill={CHART_COLORS.SPOTIFY_GREEN}
+                radius={[8, 8, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -108,13 +130,11 @@ export default function AdvancedAudioAnalysis({ timeRange }: { timeRange: TimeRa
                 {stats.modes.map((mode, index) => (
                   <Cell
                     key={mode.name}
-                    fill={
-                      index === 0 ? CHART_COLORS.SPOTIFY_GREEN : CHART_COLORS.SPOTIFY_GREEN_DARK
-                    }
+                    fill={index === 0 ? CHART_COLORS.SPOTIFY_GREEN : CHART_COLORS.MUTED}
                   />
                 ))}
               </Pie>
-              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Tooltip {...CHART_TOOLTIP_PROPS} formatter={tracksLabel} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -132,8 +152,13 @@ export default function AdvancedAudioAnalysis({ timeRange }: { timeRange: TimeRa
                 height={80}
               />
               <YAxis stroke={CHART_AXIS_STROKE} allowDecimals={false} />
-              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-              <Bar dataKey="count" fill={CHART_COLORS.SPOTIFY_GREEN} radius={[8, 8, 0, 0]} />
+              <Tooltip {...CHART_TOOLTIP_PROPS} cursor={CHART_BAR_CURSOR} />
+              <Bar
+                dataKey="count"
+                name="Tracks"
+                fill={CHART_COLORS.SPOTIFY_GREEN}
+                radius={[8, 8, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -154,7 +179,7 @@ export default function AdvancedAudioAnalysis({ timeRange }: { timeRange: TimeRa
                   <Cell key={sig.name} fill={GREEN_PALETTE[index % GREEN_PALETTE.length]} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Tooltip {...CHART_TOOLTIP_PROPS} formatter={tracksLabel} />
               <Legend />
             </PieChart>
           </ResponsiveContainer>

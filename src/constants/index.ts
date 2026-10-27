@@ -16,10 +16,26 @@ export const PIE_CHART_OUTER_RADIUS = 100;
 export const ARTIST_NAME_MAX_LENGTH = 15;
 export const ALBUM_NAME_MAX_LENGTH = 20;
 
-export const TIME_RANGES: readonly { value: TimeRange; label: string; description: string }[] = [
-  { value: 'short_term', label: 'Last 4 Weeks', description: 'Recent trends' },
-  { value: 'medium_term', label: 'Last 6 Months', description: 'Current favorites' },
-  { value: 'long_term', label: 'All Time', description: 'Your classics' },
+export const TIME_RANGES: readonly {
+  value: TimeRange;
+  label: string;
+  /** Fits the three-segment selector on phones. */
+  shortLabel: string;
+  description: string;
+}[] = [
+  {
+    value: 'short_term',
+    label: 'Last 4 Weeks',
+    shortLabel: '4 Weeks',
+    description: 'Recent trends',
+  },
+  {
+    value: 'medium_term',
+    label: 'Last 6 Months',
+    shortLabel: '6 Months',
+    description: 'Current favorites',
+  },
+  { value: 'long_term', label: 'All Time', shortLabel: 'All Time', description: 'Your classics' },
 ];
 
 export const DEFAULT_TIME_RANGE: TimeRange = 'medium_term';
@@ -27,7 +43,8 @@ export const DEFAULT_TIME_RANGE: TimeRange = 'medium_term';
 // Chart colors
 export const CHART_COLORS = {
   SPOTIFY_GREEN: '#1DB954',
-  SPOTIFY_GREEN_DARK: '#1AA34A',
+  /** Neutral counterpart to green in two-category charts. */
+  MUTED: '#9CA3AF',
   HAPPY: '#1DB954',
   NEUTRAL: '#FFD700',
   SAD: '#6B7280',
@@ -52,6 +69,20 @@ export const CHART_TOOLTIP_STYLE = {
   border: '1px solid #374151',
   borderRadius: '8px',
 } as const;
+
+/** Shared props for Recharts tooltips: dark panel, neutral readable text, "Label: value" items. */
+export const CHART_TOOLTIP_PROPS = {
+  contentStyle: CHART_TOOLTIP_STYLE,
+  labelStyle: { color: '#FFFFFF', fontWeight: 600 },
+  itemStyle: { color: '#E5E7EB' },
+  separator: ': ',
+} as const;
+
+/** Subtle hover highlight behind the active bar. */
+export const CHART_BAR_CURSOR = { fill: 'rgba(255, 255, 255, 0.06)' } as const;
+
+/** Neutral text color for in-chart labels (matches --color-spotify-gray). */
+export const CHART_LABEL_FILL = '#B3B3B3';
 
 export const CHART_GRID_STROKE = '#374151';
 export const CHART_AXIS_STROKE = '#9CA3AF';

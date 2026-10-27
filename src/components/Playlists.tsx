@@ -27,7 +27,7 @@ export default function Playlists() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total Playlists" value={playlists.length} highlight />
         <StatCard label="Total Tracks" value={totalTracks.toLocaleString()} />
         <StatCard
@@ -76,7 +76,7 @@ export default function Playlists() {
             </div>
 
             {playlist.owner.display_name && (
-              <p className="mt-2 text-xs text-gray-500">By {playlist.owner.display_name}</p>
+              <p className="mt-2 text-xs text-gray-400">By {playlist.owner.display_name}</p>
             )}
           </li>
         ))}

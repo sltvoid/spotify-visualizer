@@ -8,10 +8,11 @@ import { hasPopularity } from '../utils/stats';
 import {
   ARTIST_NAME_MAX_LENGTH,
   CHART_AXIS_STROKE,
+  CHART_BAR_CURSOR,
   CHART_COLORS,
   CHART_GRID_STROKE,
   CHART_HEIGHT,
-  CHART_TOOLTIP_STYLE,
+  CHART_TOOLTIP_PROPS,
 } from '../constants';
 import ChartCard from './ChartCard';
 import CoverImage from './CoverImage';
@@ -73,7 +74,12 @@ export default function TopArtists({ timeRange, preview = false }: TopArtistsPro
               </p>
             </div>
             {showPopularity && (
-              <span className="shrink-0 text-sm text-gray-400">{artist.popularity}</span>
+              <span className="shrink-0 text-right leading-tight">
+                <span className="block text-sm font-medium text-gray-300 tabular-nums">
+                  {artist.popularity}
+                </span>
+                <span className="block text-[11px] text-gray-400">popularity</span>
+              </span>
             )}
           </li>
         ))}
@@ -121,9 +127,10 @@ export default function TopArtists({ timeRange, preview = false }: TopArtistsPro
                     height={100}
                   />
                   <YAxis stroke={CHART_AXIS_STROKE} />
-                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Tooltip {...CHART_TOOLTIP_PROPS} cursor={CHART_BAR_CURSOR} />
                   <Bar
                     dataKey="popularity"
+                    name="Popularity"
                     fill={CHART_COLORS.SPOTIFY_GREEN}
                     radius={[8, 8, 0, 0]}
                   />
