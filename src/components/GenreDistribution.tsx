@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { TimeRange } from '../types/spotify';
 import { useTopArtists } from '../hooks/useSpotify';
-import { GREEN_PALETTE, PIE_CHART_OUTER_RADIUS } from '../constants';
+import { CHART_LABEL_FILL, GREEN_PALETTE, PIE_CHART_OUTER_RADIUS } from '../constants';
 import { getTopGenres, percentOf } from '../utils/stats';
 import ChartCard from './ChartCard';
 import EmptyState from './EmptyState';
@@ -33,16 +33,20 @@ export default function GenreDistribution({ timeRange, preview = false }: GenreD
   const genres = useMemo(() => {
     const top = getTopGenres(artists ?? []);
     const total = top.reduce((sum, g) => sum + g.value, 0);
+    // Not `percent`: Recharts adds its own `percent` (a 0-1 fraction) to each pie sector.
     return top.map((g, index) => ({
       ...g,
       rank: index + 1,
-      percent: percentOf(g.value, total).toFixed(1),
+      share: percentOf(g.value, total).toFixed(1),
     }));
   }, [artists]);
 
   if (isPending) return <LoadingSpinner />;
   if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
   if (genres.length === 0) return <EmptyState>No genre data available</EmptyState>;
+
+  // Genres are sorted by count, so the first one sets the scale for the mobile bars.
+  const maxValue = genres[0].value;
 
   if (preview) {
     return (
@@ -55,7 +59,7 @@ export default function GenreDistribution({ timeRange, preview = false }: GenreD
             <Swatch index={index} />
             <span className="flex-1 truncate font-medium capitalize">{genre.name}</span>
             <span className="shrink-0 text-sm font-semibold text-spotify-green">
-              {genre.percent}%
+              {genre.share}%
             </span>
           </li>
         ))}
@@ -76,12 +80,15 @@ export default function GenreDistribution({ timeRange, preview = false }: GenreD
                     <Swatch index={index} />
                     <span className="font-medium capitalize">{genre.name}</span>
                   </div>
-                  <span className="font-semibold text-spotify-green">{genre.percent}%</span>
+                  <span className="font-semibold text-spotify-green">{genre.share}%</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-gray-700" aria-hidden="true">
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ backgroundColor: colorAt(index), width: `${genre.percent}%` }}
+                    style={{
+                      backgroundColor: colorAt(index),
+                      width: `${percentOf(genre.value, maxValue)}%`,
+                    }}
                   />
                 </div>
               </li>
@@ -100,7 +107,18 @@ export default function GenreDistribution({ timeRange, preview = false }: GenreD
                 cx="50%"
                 cy="50%"
                 labelLine
-                label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(1)}%)`}
+                label={({ x, y, textAnchor, name, percent }) => (
+                  <text
+                    x={x}
+                    y={y}
+                    textAnchor={textAnchor}
+                    dominantBaseline="central"
+                    fill={CHART_LABEL_FILL}
+                    fontSize={14}
+                  >
+                    {`${name} (${((percent ?? 0) * 100).toFixed(1)}%)`}
+                  </text>
+                )}
                 outerRadius={PIE_CHART_OUTER_RADIUS + 20}
                 dataKey="value"
                 nameKey="name"
@@ -119,7 +137,7 @@ export default function GenreDistribution({ timeRange, preview = false }: GenreD
                         #{genre.rank} {genre.name}
                       </p>
                       <p className="text-sm text-gray-300">Artists: {genre.value}</p>
-                      <p className="text-sm text-gray-300">Share: {genre.percent}%</p>
+                      <p className="text-sm text-gray-300">Share: {genre.share}%</p>
                     </div>
                   );
                 }}
@@ -143,7 +161,7 @@ export default function GenreDistribution({ timeRange, preview = false }: GenreD
                   </p>
                 </div>
               </div>
-              <span className="text-lg font-bold text-spotify-green">{genre.percent}%</span>
+              <span className="text-lg font-bold text-spotify-green">{genre.share}%</span>
             </div>
           </li>
         ))}

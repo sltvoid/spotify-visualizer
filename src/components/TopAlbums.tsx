@@ -8,10 +8,11 @@ import { joinArtistNames, truncateString } from '../utils/formatters';
 import {
   ALBUM_NAME_MAX_LENGTH,
   CHART_AXIS_STROKE,
+  CHART_BAR_CURSOR,
   CHART_COLORS,
   CHART_GRID_STROKE,
   CHART_HEIGHT,
-  CHART_TOOLTIP_STYLE,
+  CHART_TOOLTIP_PROPS,
 } from '../constants';
 import ChartCard from './ChartCard';
 import CoverImage from './CoverImage';
@@ -48,8 +49,13 @@ export default function TopAlbums({ timeRange }: { timeRange: TimeRange }) {
               height={120}
             />
             <YAxis stroke={CHART_AXIS_STROKE} allowDecimals={false} />
-            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-            <Bar dataKey="tracks" fill={CHART_COLORS.SPOTIFY_GREEN} radius={[8, 8, 0, 0]} />
+            <Tooltip {...CHART_TOOLTIP_PROPS} cursor={CHART_BAR_CURSOR} />
+            <Bar
+              dataKey="tracks"
+              name="Top tracks"
+              fill={CHART_COLORS.SPOTIFY_GREEN}
+              radius={[8, 8, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -62,28 +68,31 @@ export default function TopAlbums({ timeRange }: { timeRange: TimeRange }) {
           const year = getReleaseYear(album.release_date);
           return (
             <li key={album.id} className="card transition-all hover:bg-gray-700/50">
-              <div className="relative mb-4">
+              <CoverImage
+                images={album.images}
+                alt={`Album cover for ${album.name}`}
+                size={300}
+                className="mb-4 aspect-square w-full rounded-lg"
+                fallbackIcon={Disc}
+              />
+
+              {/* Rank sits beside the title (as on artist cards), not over the cover art. */}
+              <div className="flex items-start gap-3">
                 <span
-                  className="absolute -top-2 -left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-spotify-green text-xs font-bold text-white shadow-lg ring-2 ring-gray-900"
+                  className="shrink-0 text-2xl leading-tight font-bold text-spotify-green tabular-nums"
                   aria-label={`Rank ${index + 1}`}
                 >
                   {index + 1}
                 </span>
-                <CoverImage
-                  images={album.images}
-                  alt={`Album cover for ${album.name}`}
-                  size={300}
-                  className="aspect-square w-full rounded-lg"
-                  fallbackIcon={Disc}
-                />
+                <div className="min-w-0 flex-1">
+                  <h4 className="mb-1 truncate font-semibold">{album.name}</h4>
+                  {album.artists && album.artists.length > 0 && (
+                    <p className="mb-2 truncate text-sm text-gray-400">
+                      {joinArtistNames(album.artists)}
+                    </p>
+                  )}
+                </div>
               </div>
-
-              <h4 className="mb-1 truncate font-semibold">{album.name}</h4>
-              {album.artists && album.artists.length > 0 && (
-                <p className="mb-2 truncate text-sm text-gray-400">
-                  {joinArtistNames(album.artists)}
-                </p>
-              )}
 
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-sm text-gray-400">
@@ -92,7 +101,7 @@ export default function TopAlbums({ timeRange }: { timeRange: TimeRange }) {
                 <SpotifyLink href={album.external_urls.spotify} label={album.name} size={16} />
               </div>
 
-              {year && <p className="mt-1 text-xs text-gray-500">Released: {year}</p>}
+              {year && <p className="mt-1 text-xs text-gray-400">Released: {year}</p>}
             </li>
           );
         })}

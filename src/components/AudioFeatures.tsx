@@ -15,7 +15,7 @@ import {
   CHART_AXIS_STROKE,
   CHART_COLORS,
   CHART_GRID_STROKE,
-  CHART_TOOLTIP_STYLE,
+  CHART_TOOLTIP_PROPS,
 } from '../constants';
 import ChartCard from './ChartCard';
 import EmptyState from './EmptyState';
@@ -61,14 +61,14 @@ export default function AudioFeatures({ timeRange }: { timeRange: TimeRange }) {
             <PolarAngleAxis dataKey="feature" stroke={CHART_AXIS_STROKE} />
             <PolarRadiusAxis angle={90} domain={[0, 100]} stroke={CHART_AXIS_STROKE} />
             <Radar
-              name="Features"
+              name="Average"
               dataKey="value"
               stroke={CHART_COLORS.SPOTIFY_GREEN}
               fill={CHART_COLORS.SPOTIFY_GREEN}
               fillOpacity={0.6}
             />
             <Tooltip
-              contentStyle={CHART_TOOLTIP_STYLE}
+              {...CHART_TOOLTIP_PROPS}
               formatter={(value) => `${Number(value).toFixed(1)}%`}
             />
           </RadarChart>

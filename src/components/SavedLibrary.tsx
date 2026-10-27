@@ -14,6 +14,7 @@ import CoverImage from './CoverImage';
 import EmptyState from './EmptyState';
 import ErrorMessage from './ErrorMessage';
 import LoadingSpinner from './LoadingSpinner';
+import SpotifyLink from './SpotifyLink';
 import StatCard from './StatCard';
 
 export default function SavedLibrary() {
@@ -54,7 +55,7 @@ export default function SavedLibrary() {
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-4" aria-label="Library statistics">
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-4" aria-label="Library statistics">
         <StatCard label="Total Tracks" value={tracks.length.toLocaleString()} highlight />
         <StatCard label="Total Duration" value={formatHoursMinutes(summary.totalDuration)} />
         <StatCard label="Unique Artists" value={summary.uniqueArtists.toLocaleString()} />
@@ -68,7 +69,7 @@ export default function SavedLibrary() {
               key={option.label}
               type="button"
               onClick={() => setLoadLimit(option.value)}
-              className={`btn-secondary ${loadLimit === option.value ? 'bg-spotify-green' : ''}`}
+              className={`btn-secondary ${loadLimit === option.value ? 'bg-spotify-green text-black' : ''}`}
               aria-pressed={loadLimit === option.value}
             >
               {option.label}
@@ -113,11 +114,13 @@ export default function SavedLibrary() {
                 {track.album.name}
               </div>
 
-              <div className="text-sm text-gray-500">{formatDuration(track.duration_ms)}</div>
+              <div className="text-sm text-gray-400">{formatDuration(track.duration_ms)}</div>
 
-              <div className="hidden text-xs text-gray-500 lg:block">
+              <div className="hidden text-xs text-gray-400 lg:block">
                 <time dateTime={added_at}>{formatDate(added_at)}</time>
               </div>
+
+              <SpotifyLink href={track.external_urls.spotify} label={track.name} />
             </div>
           </li>
         ))}

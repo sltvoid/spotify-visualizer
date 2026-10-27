@@ -71,9 +71,9 @@ export default function ListeningStats({ timeRange }: { timeRange: TimeRange }) 
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {stats.map(({ icon: Icon, label, value, color, bgColor }) => (
-        <div key={label} className="card transition-transform duration-200 hover:scale-105">
+        <div key={label} className="card">
           <div className={`${bgColor} mb-3 flex h-12 w-12 items-center justify-center rounded-lg`}>
             <Icon className={color} size={24} aria-hidden="true" />
           </div>

@@ -20,7 +20,7 @@ export default function TopTracks({ timeRange }: { timeRange: TimeRange }) {
       {tracks.map((track, index) => (
         <li key={track.id} className="card transition-all duration-200 hover:bg-gray-700/50">
           <div className="flex items-center gap-4">
-            <span className="w-8 text-center text-2xl font-bold text-gray-500" aria-hidden="true">
+            <span className="w-8 text-center text-2xl font-bold text-gray-400" aria-hidden="true">
               {index + 1}
             </span>
 
@@ -35,14 +35,14 @@ export default function TopTracks({ timeRange }: { timeRange: TimeRange }) {
             <div className="min-w-0 flex-1">
               <h4 className="truncate font-semibold">{track.name}</h4>
               <p className="truncate text-sm text-gray-400">{joinArtistNames(track.artists)}</p>
-              <p className="mt-1 truncate text-xs text-gray-500">{track.album.name}</p>
+              <p className="mt-1 truncate text-xs text-gray-400">{track.album.name}</p>
             </div>
 
             <div className="hidden items-center gap-6 md:flex">
               {/* Not returned to Development Mode apps since February 2026. */}
               {track.popularity !== undefined && (
                 <div className="text-center">
-                  <div className="text-xs text-gray-500">Popularity</div>
+                  <div className="text-xs text-gray-400">Popularity</div>
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-20 rounded-full bg-gray-700" aria-hidden="true">
                       <div
@@ -56,7 +56,7 @@ export default function TopTracks({ timeRange }: { timeRange: TimeRange }) {
               )}
 
               <div className="text-center">
-                <div className="text-xs text-gray-500">Duration</div>
+                <div className="text-xs text-gray-400">Duration</div>
                 <div className="text-sm font-medium">{formatDuration(track.duration_ms)}</div>
               </div>
             </div>

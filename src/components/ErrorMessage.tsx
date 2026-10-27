@@ -1,6 +1,6 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { SpotifyAPIError } from '../services/spotify';
-import { getErrorMessage } from '../utils/errors';
+import { getErrorMessage, isAudioFeaturesUnavailable } from '../utils/errors';
 
 interface ErrorMessageProps {
   error: unknown;
@@ -9,6 +9,17 @@ interface ErrorMessageProps {
 
 /** Inline error for a single section. */
 export default function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
+  // Spotify withholding audio features is an expected limitation, not a failure: show it neutrally.
+  if (isAudioFeaturesUnavailable(error)) {
+    return (
+      <div className="card text-center" role="status">
+        <Info className="mx-auto mb-2 h-8 w-8 text-gray-400" aria-hidden="true" />
+        <h3 className="mb-1 font-semibold">Audio features aren't available for this app</h3>
+        <p className="mx-auto max-w-xl text-sm text-gray-400">{getErrorMessage(error)}</p>
+      </div>
+    );
+  }
+
   const isPermanent = error instanceof SpotifyAPIError && error.status === 403;
 
   return (

@@ -43,6 +43,11 @@ export function truncateString(str: string, maxLength: number): string {
   return str.length <= maxLength ? str : `${str.slice(0, maxLength)}...`;
 }
 
+/** "1 track", "28 tracks". */
+export function formatCount(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count.toLocaleString()} ${count === 1 ? singular : plural}`;
+}
+
 export function joinArtistNames(artists: { name: string }[]): string {
   return artists.map((a) => a.name).join(', ');
 }

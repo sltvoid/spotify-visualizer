@@ -7,7 +7,7 @@ const FEATURES = [
   'Top Artists, Tracks & Albums',
   'Listening Insights',
   'Genre Distribution',
-  'Listening History Timeline',
+  'Recently Played & Playlists',
   'Multiple Time Ranges',
 ];
 
@@ -41,7 +41,7 @@ export default function Login() {
         </div>
 
         <h1 className="mb-4 bg-linear-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-5xl font-bold text-transparent drop-shadow-lg">
-          Spotify Stats
+          Stats for Spotify
         </h1>
 
         <p className="mb-8 text-lg text-gray-300">

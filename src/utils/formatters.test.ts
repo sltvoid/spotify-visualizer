@@ -3,6 +3,7 @@ import {
   createCSV,
   decodeHtmlEntities,
   escapeCSVValue,
+  formatCount,
   formatDuration,
   formatHoursMinutes,
   formatRelativeTime,
@@ -42,6 +43,14 @@ describe('truncateString', () => {
   it('leaves short strings alone and truncates long ones', () => {
     expect(truncateString('short', 10)).toBe('short');
     expect(truncateString('a very long name', 6)).toBe('a very...');
+  });
+});
+
+describe('formatCount', () => {
+  it('pluralizes the unit', () => {
+    expect(formatCount(1, 'track')).toBe('1 track');
+    expect(formatCount(28, 'track')).toBe('28 tracks');
+    expect(formatCount(0, 'artist')).toBe('0 artists');
   });
 });
 

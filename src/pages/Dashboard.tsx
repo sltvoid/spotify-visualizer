@@ -123,7 +123,7 @@ export default function Dashboard() {
             />
           </div>
           <h1 className="mb-1 bg-linear-to-r from-spotify-green via-green-400 to-spotify-green-light bg-clip-text text-4xl font-bold text-transparent drop-shadow-lg md:text-5xl">
-            Your Spotify Stats
+            Your Stats for Spotify
           </h1>
           <p className="text-gray-300">Discover your music insights and listening habits</p>
         </header>
@@ -186,7 +186,7 @@ export default function Dashboard() {
                   tabIndex={selected ? 0 : -1}
                   className={`rounded-xl px-4 py-2 font-medium whitespace-nowrap transition-all duration-300 ${
                     selected
-                      ? 'border border-white/20 bg-linear-to-br from-spotify-green to-spotify-green-light text-white shadow-glow-green-strong'
+                      ? 'border border-white/20 bg-linear-to-br from-spotify-green to-spotify-green-light text-black shadow-glow-green-strong'
                       : 'border border-white/10 bg-white/5 text-gray-300 backdrop-blur-sm hover:border-white/20 hover:bg-white/10'
                   }`}
                 >
@@ -204,7 +204,7 @@ export default function Dashboard() {
           </ErrorBoundary>
         </main>
 
-        <footer className="py-8 text-center text-sm text-gray-500">
+        <footer className="py-8 text-center text-sm text-gray-400">
           <p>Made with the Spotify Web API</p>
           <p className="mt-2">Your data stays in your browser and is never stored or shared</p>
         </footer>

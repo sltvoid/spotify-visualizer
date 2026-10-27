@@ -10,7 +10,9 @@ export default function StatCard({ label, value, highlight = false }: StatCardPr
   return (
     <div className="card">
       <p className="text-sm text-gray-400">{label}</p>
-      <p className={`text-3xl font-bold ${highlight ? 'text-spotify-green' : ''}`}>{value}</p>
+      <p className={`text-2xl font-bold sm:text-3xl ${highlight ? 'text-spotify-green' : ''}`}>
+        {value}
+      </p>
     </div>
   );
 }
