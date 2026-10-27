@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STORAGE_KEYS } from '../constants';
-import { getAudioFeatures, getSavedTracks, getTopTracks, SpotifyAPIError } from './spotify';
+import {
+  getAudioFeatures,
+  getCurrentlyPlaying,
+  getSavedAlbums,
+  getSavedTracks,
+  getTopTracks,
+  SpotifyAPIError,
+} from './spotify';
 
 function json(body: object, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -82,5 +89,29 @@ describe('Spotify API client', () => {
     );
 
     await expect(getAudioFeatures(['a', 'b'])).resolves.toEqual([{ id: 'a' }]);
+  });
+
+  it('returns null when nothing is playing (204 No Content)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getCurrentlyPlaying()).resolves.toBeNull();
+    expect(String(fetchMock.mock.calls[0][0])).toContain('additional_types=episode');
+  });
+
+  it('drops the embedded track list from saved albums', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        json({
+          items: [{ added_at: 'x', album: { id: 'al', name: 'A', tracks: { items: [1, 2] } } }],
+          next: null,
+        }),
+      ),
+    );
+
+    await expect(getSavedAlbums()).resolves.toEqual([
+      { added_at: 'x', album: { id: 'al', name: 'A' } },
+    ]);
   });
 });

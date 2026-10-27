@@ -3,6 +3,7 @@ import type { SpotifyArtist, SpotifyTrack } from '../types/spotify';
 import {
   average,
   averagePopularity,
+  compareRankings,
   getArtistLoyalty,
   getDecadeDistribution,
   getGenreDiversity,
@@ -12,6 +13,7 @@ import {
   hasPopularity,
   percentOf,
   rankBy,
+  summarizeSavedAlbums,
 } from './stats';
 
 const artist = (id: string, extra: Partial<SpotifyArtist> = {}): SpotifyArtist => ({
@@ -162,5 +164,72 @@ describe('percentOf', () => {
   it('guards against dividing by zero', () => {
     expect(percentOf(5, 0)).toBe(0);
     expect(percentOf(1, 4)).toBe(25);
+  });
+});
+
+describe('compareRankings', () => {
+  const items = (...ids: string[]) => ids.map((id) => ({ id }));
+
+  it('finds new, climbing, and fading items', () => {
+    const baseline = items('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h');
+    const recent = items('h', 'a', 'new1', 'b', 'new2');
+
+    const result = compareRankings(recent, baseline, { minClimb: 3, fadingFromTop: 5 });
+
+    expect(result.newEntries.map((r) => [r.item.id, r.rank])).toEqual([
+      ['new1', 3],
+      ['new2', 5],
+    ]);
+    // h went from #8 to #1
+    expect(result.climbing).toEqual([{ item: { id: 'h' }, rank: 1, previousRank: 8 }]);
+    // c, d, e were top 5 in the baseline and are gone now
+    expect(result.fading.map((f) => [f.item.id, f.previousRank])).toEqual([
+      ['c', 3],
+      ['d', 4],
+      ['e', 5],
+    ]);
+  });
+
+  it('sorts climbers by places gained and applies the limit', () => {
+    const baseline = items('x', 'y', 'z', 'p', 'q', 'r', 's', 't', 'u', 'v');
+    const recent = items('v', 't', 'x');
+
+    const result = compareRankings(recent, baseline, { minClimb: 1, limit: 1 });
+
+    expect(result.climbing.map((r) => r.item.id)).toEqual(['v']);
+  });
+
+  it('reports nothing when the lists match', () => {
+    const list = items('a', 'b', 'c');
+    expect(compareRankings(list, list)).toEqual({ newEntries: [], climbing: [], fading: [] });
+  });
+});
+
+describe('summarizeSavedAlbums', () => {
+  const saved = (id: string, artistIds: string[], releaseDate: string, totalTracks: number) => ({
+    added_at: '2025-01-01T00:00:00Z',
+    album: {
+      id,
+      name: id,
+      images: [],
+      release_date: releaseDate,
+      total_tracks: totalTracks,
+      artists: artistIds.map((a) => artist(a)),
+      external_urls: { spotify: '' },
+    },
+  });
+
+  it('totals tracks, counts artists, and finds the top decade', () => {
+    expect(
+      summarizeSavedAlbums([
+        saved('A', ['1'], '1997-05-01', 10),
+        saved('B', ['1', '2'], '1991', 12),
+        saved('C', ['3'], '2015-01-01', 8),
+      ]),
+    ).toEqual({ totalTracks: 30, uniqueArtists: 3, topDecade: '1990s' });
+  });
+
+  it('handles an empty library', () => {
+    expect(summarizeSavedAlbums([])).toEqual({ totalTracks: 0, uniqueArtists: 0, topDecade: null });
   });
 });

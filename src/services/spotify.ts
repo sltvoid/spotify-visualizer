@@ -1,9 +1,11 @@
 import type {
   AudioFeatures,
+  CurrentlyPlaying,
   CursorPaging,
   Paging,
   Playlist,
   RecentlyPlayedTrack,
+  SavedAlbum,
   SavedTrack,
   SpotifyArtist,
   SpotifyTrack,
@@ -77,7 +79,9 @@ async function request<T>(path: string, params: QueryParams = {}): Promise<T> {
     );
   }
 
-  return response.json() as Promise<T>;
+  // Some endpoints (e.g. currently-playing) answer 204 with an empty body.
+  const body = await response.text();
+  return (body ? JSON.parse(body) : null) as T;
 }
 
 /** Follows `next` links until there are no more pages or `maxItems` is reached. */
@@ -159,4 +163,23 @@ export function getSavedTracks(maxItems?: number): Promise<SavedTrack[]> {
 
 export function getPlaylists(maxItems?: number): Promise<Playlist[]> {
   return getAllPages<Playlist>('/me/playlists', maxItems);
+}
+
+/**
+ * Saved albums. Spotify embeds each album's track list in the response; it is
+ * dropped here so large libraries don't keep megabytes of unused data cached.
+ */
+export async function getSavedAlbums(maxItems?: number): Promise<SavedAlbum[]> {
+  const items = await getAllPages<SavedAlbum & { album: { tracks?: unknown } }>(
+    '/me/albums',
+    maxItems,
+  );
+  return items.map(({ added_at, album: { tracks: _tracks, ...album } }) => ({ added_at, album }));
+}
+
+/** What the user is playing right now, or null when nothing is playing. */
+export function getCurrentlyPlaying(): Promise<CurrentlyPlaying | null> {
+  return request<CurrentlyPlaying | null>('/me/player/currently-playing', {
+    additional_types: 'episode',
+  });
 }

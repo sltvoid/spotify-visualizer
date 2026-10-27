@@ -143,3 +143,34 @@ describe('token refresh', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe('granted scopes', () => {
+  it('remembers the scopes Spotify granted and clears them on logout', async () => {
+    const { handleCallback, hasGrantedScope, clearTokens } = await loadAuth();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        tokenResponse({
+          access_token: 'a',
+          expires_in: 3600,
+          scope: 'user-top-read user-read-currently-playing',
+        }),
+      ),
+    );
+    sessionStorage.setItem(STORAGE_KEYS.AUTH_STATE, 's');
+    sessionStorage.setItem(STORAGE_KEYS.CODE_VERIFIER, 'v');
+
+    await handleCallback('?code=scoped&state=s');
+
+    expect(hasGrantedScope('user-read-currently-playing')).toBe(true);
+    expect(hasGrantedScope('user-read')).toBe(false);
+    clearTokens();
+    expect(hasGrantedScope('user-read-currently-playing')).toBe(false);
+  });
+
+  it('treats sessions from before scope tracking as not granted', async () => {
+    const { hasGrantedScope } = await loadAuth();
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, 'old-session');
+    expect(hasGrantedScope('user-read-currently-playing')).toBe(false);
+  });
+});

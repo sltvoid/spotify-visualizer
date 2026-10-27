@@ -2,14 +2,17 @@ import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import type { TimeRange } from '../types/spotify';
 import {
   getAudioFeatures,
+  getCurrentlyPlaying,
   getCurrentUser,
   getPlaylists,
   getRecentlyPlayed,
+  getSavedAlbums,
   getSavedTracks,
   getTopArtists,
   getTopTracks,
 } from '../services/spotify';
 import { queryClient } from '../lib/queryClient';
+import { getPollInterval } from '../utils/nowPlaying';
 
 /*
  * One hook per Spotify resource. TanStack Query caches by key, so every
@@ -62,6 +65,30 @@ export function useSavedTracks(maxItems: number | undefined) {
     queryFn: () => getSavedTracks(maxItems),
     // Keep showing the current list while a bigger one loads.
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useSavedAlbums(maxItems: number | undefined) {
+  return useQuery({
+    queryKey: ['saved-albums', maxItems ?? 'all'],
+    queryFn: () => getSavedAlbums(maxItems),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/**
+ * Polls playback state. Polling pauses while the browser tab is hidden
+ * (TanStack Query's default), so a background tab doesn't use up rate limits.
+ */
+export function useCurrentlyPlaying(enabled: boolean) {
+  return useQuery({
+    queryKey: ['currently-playing'],
+    queryFn: getCurrentlyPlaying,
+    enabled,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) =>
+      getPollInterval(query.state.data, query.state.dataUpdatedAt, Date.now()),
   });
 }
 

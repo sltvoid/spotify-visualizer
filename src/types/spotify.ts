@@ -33,11 +33,13 @@ export interface SpotifyAlbum {
   name: string;
   images: SpotifyImage[];
   release_date: string;
+  total_tracks?: number;
   artists?: SpotifyArtist[];
   external_urls: ExternalUrls;
 }
 
 export interface SpotifyTrack {
+  type?: 'track';
   id: string;
   name: string;
   artists: SpotifyArtist[];
@@ -45,6 +47,24 @@ export interface SpotifyTrack {
   duration_ms: number;
   popularity?: number;
   external_urls: ExternalUrls;
+}
+
+export interface SpotifyEpisode {
+  type: 'episode';
+  id: string;
+  name: string;
+  duration_ms: number;
+  images: SpotifyImage[];
+  show: { name: string };
+  external_urls: ExternalUrls;
+}
+
+export interface CurrentlyPlaying {
+  is_playing: boolean;
+  /** Position in the current item when the response was generated. */
+  progress_ms: number | null;
+  currently_playing_type: 'track' | 'episode' | 'ad' | 'unknown';
+  item: SpotifyTrack | SpotifyEpisode | null;
 }
 
 export interface RecentlyPlayedTrack {
@@ -82,6 +102,11 @@ export interface UserProfile {
 export interface SavedTrack {
   added_at: string;
   track: SpotifyTrack;
+}
+
+export interface SavedAlbum {
+  added_at: string;
+  album: SpotifyAlbum & { total_tracks: number; artists: SpotifyArtist[] };
 }
 
 interface PlaylistItemsRef {

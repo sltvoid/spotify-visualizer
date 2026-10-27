@@ -20,6 +20,7 @@
 
   --animate-shimmer: shimmer 20s ease-in-out infinite;
   --animate-float: float 6s ease-in-out infinite;
+  --animate-equalizer: equalizer 0.9s ease-in-out infinite;
 
   @keyframes shimmer {
     0%,
@@ -28,6 +29,16 @@
     }
     50% {
       opacity: 0.8;
+    }
+  }
+
+  @keyframes equalizer {
+    0%,
+    100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
     }
   }
 

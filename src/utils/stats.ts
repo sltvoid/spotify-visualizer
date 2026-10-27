@@ -1,4 +1,10 @@
-import type { AudioFeatures, SpotifyAlbum, SpotifyArtist, SpotifyTrack } from '../types/spotify';
+import type {
+  AudioFeatures,
+  SavedAlbum,
+  SpotifyAlbum,
+  SpotifyArtist,
+  SpotifyTrack,
+} from '../types/spotify';
 
 /*
  * Pure calculations behind the dashboard charts. Kept free of React so they
@@ -65,11 +71,14 @@ export function getReleaseYear(releaseDate: string | undefined): number | null {
   return Number.isFinite(year) && year > 0 ? year : null;
 }
 
+/** "1994-02-01" -> "1990s"; null when the date is unknown. */
+export function getDecade(releaseDate: string | undefined): string | null {
+  const year = getReleaseYear(releaseDate);
+  return year === null ? null : `${Math.floor(year / 10) * 10}s`;
+}
+
 export function getDecadeDistribution(tracks: SpotifyTrack[], limit = 6) {
-  return rankBy(tracks, (t) => {
-    const year = getReleaseYear(t.album.release_date);
-    return year === null ? null : `${Math.floor(year / 10) * 10}s`;
-  })
+  return rankBy(tracks, (t) => getDecade(t.album.release_date))
     .slice(0, limit)
     .map(({ name, value }) => ({ decade: name, count: value }));
 }
@@ -109,4 +118,70 @@ export function getScoreLabel(score: number): string {
 /** Share of `value` in `total` as a percentage, guarding against divide-by-zero. */
 export function percentOf(value: number, total: number): number {
   return total === 0 ? 0 : (value / total) * 100;
+}
+
+export interface RankedItem<T> {
+  item: T;
+  /** 1-based position in the recent list. */
+  rank: number;
+  /** 1-based position in the baseline list, or null if it wasn't there. */
+  previousRank: number | null;
+}
+
+export interface FadedItem<T> {
+  item: T;
+  /** 1-based position in the baseline list. */
+  previousRank: number;
+}
+
+export interface RankingComparison<T> {
+  /** In the recent top list but not in the baseline at all. */
+  newEntries: RankedItem<T>[];
+  /** Moved up at least `minClimb` places. */
+  climbing: RankedItem<T>[];
+  /** Near the top of the baseline but missing from the recent list. */
+  fading: FadedItem<T>[];
+}
+
+/**
+ * Compares a recent top list (e.g. last 4 weeks) with a longer baseline
+ * (e.g. all time) to find what's new, climbing, and fading.
+ */
+export function compareRankings<T extends { id: string }>(
+  recent: T[],
+  baseline: T[],
+  { limit = 10, minClimb = 5, fadingFromTop = 20 } = {},
+): RankingComparison<T> {
+  const baselineRank = new Map(baseline.map((item, index) => [item.id, index + 1]));
+  const recentIds = new Set(recent.map((item) => item.id));
+
+  const ranked = recent.map((item, index) => ({
+    item,
+    rank: index + 1,
+    previousRank: baselineRank.get(item.id) ?? null,
+  }));
+
+  const newEntries = ranked.filter((r) => r.previousRank === null).slice(0, limit);
+
+  const climbBy = (r: RankedItem<T>) => (r.previousRank ?? r.rank) - r.rank;
+  const climbing = ranked
+    .filter((r) => r.previousRank !== null && climbBy(r) >= minClimb)
+    .sort((a, b) => climbBy(b) - climbBy(a) || a.rank - b.rank)
+    .slice(0, limit);
+
+  const fading = baseline
+    .map((item, index) => ({ item, previousRank: index + 1 }))
+    .slice(0, fadingFromTop)
+    .filter(({ item }) => !recentIds.has(item.id))
+    .slice(0, limit);
+
+  return { newEntries, climbing, fading };
+}
+
+export function summarizeSavedAlbums(saved: SavedAlbum[]) {
+  return {
+    totalTracks: saved.reduce((sum, { album }) => sum + (album.total_tracks ?? 0), 0),
+    uniqueArtists: new Set(saved.flatMap(({ album }) => album.artists.map((a) => a.id))).size,
+    topDecade: rankBy(saved, ({ album }) => getDecade(album.release_date))[0]?.name ?? null,
+  };
 }

@@ -6,11 +6,13 @@ Everything runs in your browser: there is no backend, and your data is never sto
 
 ## Features
 
+- **Now Playing**: what you're listening to right now, with live progress
 - **Overview**: headline stats plus your top artists and genres
 - **Insights**: genre diversity, artist loyalty, decade breakdown, and more
+- **Trending**: artists and tracks that are new, climbing, or fading in your last 4 weeks compared with the last 6 months or all time
 - **Top Artists / Tracks / Albums** for the last 4 weeks, 6 months, or all time
 - **Genres**: distribution chart across your top artists
-- **Library**: saved-track stats with CSV export
+- **Library**: saved tracks and saved albums, with stats and CSV export
 - **Playlists** and **Recently Played**
 - **Audio Features**: only for apps with extended API access (see [Spotify API limits](#spotify-api-limits))
 
@@ -92,7 +94,8 @@ The app uses Spotify's [Authorization Code with PKCE](https://developer.spotify.
 
 - The PKCE verifier and CSRF `state` live in `sessionStorage` only for the login round trip.
 - Access and refresh tokens are stored in `localStorage`. Tokens are refreshed automatically before they expire, and concurrent requests share one refresh.
-- Requested scopes are read-only: profile, top items, recently played, library, and playlists.
+- Requested scopes are read-only: profile, top items, recently played, currently playing, library, and playlists.
+- The scopes a user actually granted are remembered, so a feature that needs a newly added scope (like Now Playing) shows a **Reconnect** prompt for older logins instead of failing.
 
 ## Deployment
 

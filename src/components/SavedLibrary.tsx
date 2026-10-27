@@ -1,127 +1,50 @@
-import { useMemo, useState } from 'react';
-import { Download, LoaderCircle, Music } from 'lucide-react';
-import { useSavedTracks } from '../hooks/useSpotify';
-import {
-  createCSV,
-  downloadFile,
-  formatDate,
-  formatDuration,
-  formatHoursMinutes,
-  joinArtistNames,
-} from '../utils/formatters';
-import { LOAD_LIMIT_OPTIONS } from '../constants';
-import CoverImage from './CoverImage';
-import EmptyState from './EmptyState';
-import ErrorMessage from './ErrorMessage';
-import LoadingSpinner from './LoadingSpinner';
-import StatCard from './StatCard';
+import { useSearchParams } from 'react-router';
+import SavedAlbums from './SavedAlbums';
+import SavedTracks from './SavedTracks';
 
+const VIEWS = [
+  { id: 'tracks', label: 'Tracks' },
+  { id: 'albums', label: 'Albums' },
+] as const;
+
+/** Library tab: saved tracks or saved albums (kept in the URL as `?view=`). */
 export default function SavedLibrary() {
-  const [loadLimit, setLoadLimit] = useState<number | undefined>(100);
-  const {
-    data: tracks,
-    isPending,
-    isError,
-    error,
-    refetch,
-    isPlaceholderData,
-  } = useSavedTracks(loadLimit);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get('view') === 'albums' ? 'albums' : 'tracks';
 
-  const summary = useMemo(() => {
-    if (!tracks) return null;
-    return {
-      totalDuration: tracks.reduce((sum, { track }) => sum + track.duration_ms, 0),
-      uniqueArtists: new Set(tracks.flatMap(({ track }) => track.artists.map((a) => a.id))).size,
-      uniqueAlbums: new Set(tracks.map(({ track }) => track.album.id)).size,
-    };
-  }, [tracks]);
-
-  if (isPending) return <LoadingSpinner />;
-  if (isError) return <ErrorMessage error={error} onRetry={() => refetch()} />;
-  if (tracks.length === 0 || !summary) return <EmptyState>No saved tracks found</EmptyState>;
-
-  const handleExportCSV = () => {
-    const headers = ['Track', 'Artist', 'Album', 'Duration', 'Added Date'];
-    const rows = tracks.map(({ track, added_at }) => [
-      track.name,
-      joinArtistNames(track.artists),
-      track.album.name,
-      formatDuration(track.duration_ms),
-      formatDate(added_at),
-    ]);
-    downloadFile(createCSV(headers, rows), 'spotify-library.csv', 'text/csv');
-  };
+  const setView = (next: (typeof VIEWS)[number]['id']) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set('view', next);
+        return params;
+      },
+      { replace: true },
+    );
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-4" aria-label="Library statistics">
-        <StatCard label="Total Tracks" value={tracks.length.toLocaleString()} highlight />
-        <StatCard label="Total Duration" value={formatHoursMinutes(summary.totalDuration)} />
-        <StatCard label="Unique Artists" value={summary.uniqueArtists.toLocaleString()} />
-        <StatCard label="Unique Albums" value={summary.uniqueAlbums.toLocaleString()} />
-      </section>
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Tracks to load">
-          {LOAD_LIMIT_OPTIONS.map((option) => (
-            <button
-              key={option.label}
-              type="button"
-              onClick={() => setLoadLimit(option.value)}
-              className={`btn-secondary ${loadLimit === option.value ? 'bg-spotify-green' : ''}`}
-              aria-pressed={loadLimit === option.value}
-            >
-              {option.label}
-            </button>
-          ))}
-          {isPlaceholderData && (
-            <span className="flex items-center gap-2 text-sm text-gray-400" role="status">
-              <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
-              Loading more...
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={handleExportCSV}
-          className="btn-secondary flex items-center gap-2"
-          disabled={isPlaceholderData}
-        >
-          <Download size={16} aria-hidden="true" />
-          Export CSV
-        </button>
+      <div
+        className="inline-flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1"
+        role="group"
+        aria-label="Library view"
+      >
+        {VIEWS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setView(id)}
+            aria-pressed={view === id}
+            className={`rounded-lg px-4 py-2 font-medium transition-colors ${
+              view === id ? 'bg-spotify-green text-white' : 'text-gray-300 hover:bg-white/10'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      <ul className="space-y-2" aria-label="Saved tracks">
-        {tracks.map(({ track, added_at }, index) => (
-          <li key={`${track.id}-${index}`} className="card transition-all hover:bg-gray-700/50">
-            <div className="flex items-center gap-4">
-              <CoverImage
-                images={track.album.images}
-                alt={`Album cover for ${track.album.name}`}
-                size={48}
-                className="h-12 w-12 rounded"
-                fallbackIcon={Music}
-              />
-
-              <div className="min-w-0 flex-1">
-                <h4 className="truncate font-medium">{track.name}</h4>
-                <p className="truncate text-sm text-gray-400">{joinArtistNames(track.artists)}</p>
-              </div>
-
-              <div className="hidden max-w-xs truncate text-sm text-gray-400 md:block">
-                {track.album.name}
-              </div>
-
-              <div className="text-sm text-gray-500">{formatDuration(track.duration_ms)}</div>
-
-              <div className="hidden text-xs text-gray-500 lg:block">
-                <time dateTime={added_at}>{formatDate(added_at)}</time>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {view === 'albums' ? <SavedAlbums /> : <SavedTracks />}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router';
 import type { TimeRange } from '../types/spotify';
 import { DASHBOARD_TABS, DEFAULT_TIME_RANGE, TIME_RANGES, type DashboardTabId } from '../constants';
 import UserProfile from '../components/UserProfile';
+import NowPlaying from '../components/NowPlaying';
 import TimeRangeSelector from '../components/TimeRangeSelector';
 import ListeningStats from '../components/ListeningStats';
 import TopArtists from '../components/TopArtists';
@@ -16,6 +17,7 @@ import AdvancedAudioAnalysis from '../components/AdvancedAudioAnalysis';
 import Playlists from '../components/Playlists';
 import SpotifyLogo from '../components/SpotifyLogo';
 import ListeningInsights from '../components/ListeningInsights';
+import Trending from '../components/Trending';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 function isTabId(value: string | null): value is DashboardTabId {
@@ -46,6 +48,8 @@ function TabPanel({ tab, timeRange }: { tab: DashboardTabId; timeRange: TimeRang
       );
     case 'insights':
       return <ListeningInsights timeRange={timeRange} />;
+    case 'trending':
+      return <Trending />;
     case 'artists':
       return <TopArtists timeRange={timeRange} />;
     case 'tracks':
@@ -129,6 +133,8 @@ export default function Dashboard() {
         </header>
 
         <UserProfile />
+
+        <NowPlaying />
 
         {showTimeRange && (
           <section className="card" aria-labelledby="time-period-label">

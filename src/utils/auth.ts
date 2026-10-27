@@ -50,6 +50,8 @@ interface TokenResponse {
   refresh_token?: string;
   expires_in: number;
   token_type: string;
+  /** Space-separated scopes the user actually granted. */
+  scope?: string;
 }
 
 function storeTokens(data: TokenResponse): void {
@@ -59,10 +61,22 @@ function storeTokens(data: TokenResponse): void {
     localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
   }
   localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, String(Date.now() + data.expires_in * 1000));
+  if (data.scope !== undefined) {
+    localStorage.setItem(STORAGE_KEYS.GRANTED_SCOPES, data.scope);
+  }
 }
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+}
+
+/**
+ * Whether the current login includes `scope`. Sessions from before a scope
+ * was added to the app won't have it until the user logs in again.
+ */
+export function hasGrantedScope(scope: string): boolean {
+  const granted = localStorage.getItem(STORAGE_KEYS.GRANTED_SCOPES);
+  return granted !== null && granted.split(' ').includes(scope);
 }
 
 export function isTokenExpired(now: number = Date.now()): boolean {
@@ -74,6 +88,7 @@ export function clearTokens(): void {
   localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY);
+  localStorage.removeItem(STORAGE_KEYS.GRANTED_SCOPES);
 }
 
 export function logout(): void {
@@ -132,6 +147,11 @@ export async function getAuthUrl(): Promise<string> {
   });
 
   return `${SPOTIFY_AUTH_URL}?${params}`;
+}
+
+/** Sends the user to Spotify to log in (or to grant newly added permissions). */
+export async function startLogin(): Promise<void> {
+  window.location.assign(await getAuthUrl());
 }
 
 export type CallbackResult = { ok: true } | { ok: false; error: string };
